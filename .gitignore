@@ -1,0 +1,21 @@
+﻿# Build and environment artifacts
+android/.gradle/
+android/.idea/
+android/local.properties
+android/**/build/
+.gradle/
+.idea/
+%SDK_ROOT%/
+gradle-*/
+tools/
+*.zip
+*.exe
+*.apk
+
+# Local source image archive
+美甲库/
+
+# IDE and OS files
+*.iml
+.DS_Store
+Thumbs.db
