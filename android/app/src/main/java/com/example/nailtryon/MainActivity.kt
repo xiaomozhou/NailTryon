@@ -27,6 +27,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -40,20 +41,22 @@ private val Bg=Color(0xFFFBF9F7); private val Coral=Color(0xFFFF6168); private v
 
 class MainActivity:ComponentActivity(){override fun onCreate(b:Bundle?){super.onCreate(b);setContent{NailTryOnApp()}}}
 
-@Composable fun NailTryOnApp(){
- var category by remember{mutableStateOf(NailCatalog.categories.first())}; var selected by remember{mutableStateOf<NailStyle?>(null)}; var showSheet by remember{mutableStateOf(false)}; var screen by remember{mutableStateOf("library")}; var history by remember{mutableStateOf(listOf<NailStyle>())}; var source by remember{mutableStateOf<Bitmap?>(null)}; var result by remember{mutableStateOf<Bitmap?>(null)}
+@Composable fun NailTryOnApp(generateTryOn: (suspend (Bitmap, Bitmap, NailStyle) -> Bitmap?)? = null){
+ var category by remember{mutableStateOf(NailCatalog.categories.first())}; var selectedId by rememberSaveable{mutableStateOf<String?>(null)}; var showSheet by remember{mutableStateOf(false)}; var screen by remember{mutableStateOf("library")}; var history by remember{mutableStateOf(listOf<NailStyle>())}; var source by remember{mutableStateOf<Bitmap?>(null)}; var result by remember{mutableStateOf<Bitmap?>(null)}
  val context=LocalContext.current
- var customNail by remember{mutableStateOf<Bitmap?>(null)}
+ val selected=NailCatalog.styles.firstOrNull{it.id==selectedId} ?: if(selectedId=="custom")NailStyle("custom","我的美甲","自选美甲","")else null
+ var customNailUri by rememberSaveable{mutableStateOf<String?>(null)}
+ val customNail=remember(customNailUri){customNailUri?.let{decodeUri(context,Uri.parse(it))}}
  val nailAlbumLauncher=rememberLauncherForActivityResult(ActivityResultContracts.GetContent()){uri:Uri?->
   if(uri!=null){
    val image=decodeUri(context,uri)
-   if(image!=null){customNail=image;selected=NailStyle("custom","我的美甲","自选美甲","");showSheet=true}
+   if(image!=null){customNailUri=uri.toString();selectedId="custom";showSheet=true}
    else Toast.makeText(context,"无法读取美甲图，请重新选择",Toast.LENGTH_SHORT).show()
   }
  }
  val cloudClient=remember{SeedreamTryOnClient("https://yviuahwjxdzgkuxjtwpd.supabase.co/functions/v1/seedream-tryon")}
  val albumLauncher=rememberLauncherForActivityResult(ActivityResultContracts.GetContent()){uri:Uri?->if(uri!=null){showSheet=false;source=decodeUri(context,uri);screen="result"}}
- val cameraLauncher=rememberLauncherForActivityResult(ActivityResultContracts.TakePicturePreview()){bitmap:Bitmap?->if(bitmap!=null){showSheet=false;source=bitmap;screen="result"}}
+ val capturePhoto=rememberCameraCapture{bitmap->showSheet=false;source=bitmap;screen="result"}
  LaunchedEffect(screen,source,selected){
   if(screen=="result"&&source!=null&&selected!=null){
    result=null
@@ -61,13 +64,13 @@ class MainActivity:ComponentActivity(){override fun onCreate(b:Bundle?){super.on
    val style=selected!!
    val nailRes=context.resources.getIdentifier(style.drawableName,"drawable",context.packageName)
    val nail=if(style.id=="custom")customNail else if(nailRes!=0) BitmapFactory.decodeResource(context.resources,nailRes) else null
-   val cloudResult=nail?.let{cloudClient.generate(hand, it, style)}
+   val cloudResult=nail?.let{if(generateTryOn!=null)generateTryOn(hand,it,style)else cloudClient.generate(hand,it,style)}
    result=cloudResult ?: withContext(Dispatchers.Default){FusionEngine().compose(hand, styleColor(style))}
   }
  }
  Scaffold(containerColor=Bg,bottomBar={NavigationBar(containerColor=Color.White){NavigationBarItem(selected=screen=="library",onClick={screen="library"},icon={Text("✦")},label={Text("美甲库")});NavigationBarItem(selected=screen=="history",onClick={screen="history"},icon={Text("◷")},label={Text("历史")})}}){pad->
-  Box(Modifier.padding(pad).fillMaxSize()){when(screen){"history"->HistoryScreen(history);"result"->selected?.let{ResultScreen(it,result,onSave={history=history+it},onBack={screen="library"})};else->LibraryScreen(category,{category=it},{selected=it;showSheet=true},onUploadNail={nailAlbumLauncher.launch("image/*")})}}
-  if(showSheet)UploadSheet(onDismiss={showSheet=false},onAlbum={albumLauncher.launch("image/*")},onCamera={cameraLauncher.launch(null)})
+  Box(Modifier.padding(pad).fillMaxSize()){when(screen){"history"->HistoryScreen(history);"result"->selected?.let{ResultScreen(it,result,onSave={history=history+it},onBack={screen="library"})};else->LibraryScreen(category,{category=it},{selectedId=it.id;showSheet=true},onUploadNail={nailAlbumLauncher.launch("image/*")})}}
+  if(showSheet)UploadSheet(onDismiss={showSheet=false},onAlbum={albumLauncher.launch("image/*")},onCamera={showSheet=false;capturePhoto()})
  }
 }
 

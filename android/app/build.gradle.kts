@@ -12,6 +12,8 @@ android { namespace = "com.example.nailtryon"; compileSdk = 35
     testOptions.unitTests.all {
         it.systemProperty("robolectric.dependency.repo.url", "https://repo.maven.apache.org/maven2")
         it.maxHeapSize = "2g"
+        // Robolectric's ParcelFileDescriptor needs this JDK 17 module access for real file I/O.
+        it.jvmArgs("--add-opens=java.base/java.io=ALL-UNNAMED")
     }
     packaging { resources.excludes += "/META-INF/{AL2.0,LGPL2.1}" }
 }
