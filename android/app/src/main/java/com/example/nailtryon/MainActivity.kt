@@ -40,9 +40,18 @@ class MainActivity:ComponentActivity(){override fun onCreate(b:Bundle?){super.on
 @Composable fun NailTryOnApp(){
  var category by remember{mutableStateOf(NailCatalog.categories.first())}; var selected by remember{mutableStateOf<NailStyle?>(null)}; var showSheet by remember{mutableStateOf(false)}; var screen by remember{mutableStateOf("library")}; var history by remember{mutableStateOf(listOf<NailStyle>())}; var source by remember{mutableStateOf<Bitmap?>(null)}; var result by remember{mutableStateOf<Bitmap?>(null)}
  val context=LocalContext.current
+ val cloudClient=remember{SeedreamTryOnClient("https://yviuahwjxdzgkuxjtwpd.supabase.co/functions/v1/seedream-tryon")}
  val albumLauncher=rememberLauncherForActivityResult(ActivityResultContracts.GetContent()){uri:Uri?->if(uri!=null){showSheet=false;source=decodeUri(context,uri);screen="result"}}
  val cameraLauncher=rememberLauncherForActivityResult(ActivityResultContracts.TakePicturePreview()){bitmap:Bitmap?->if(bitmap!=null){showSheet=false;source=bitmap;screen="result"}}
- LaunchedEffect(screen,source,selected){if(screen=="result"&&source!=null&&selected!=null){result=null;withContext(Dispatchers.Default){result=FusionEngine().compose(source!!, styleColor(selected!!))}}}
+ LaunchedEffect(screen,source,selected){
+  if(screen=="result"&&source!=null&&selected!=null){
+   result=null
+   val hand=source!!
+   val style=selected!!
+   val cloudResult=cloudClient.generate(hand, style)
+   result=cloudResult ?: withContext(Dispatchers.Default){FusionEngine().compose(hand, styleColor(style))}
+  }
+ }
  Scaffold(containerColor=Bg,bottomBar={NavigationBar(containerColor=Color.White){NavigationBarItem(selected=screen=="library",onClick={screen="library"},icon={Text("✦")},label={Text("美甲库")});NavigationBarItem(selected=screen=="history",onClick={screen="history"},icon={Text("◷")},label={Text("历史")})}}){pad->
   Box(Modifier.padding(pad).fillMaxSize()){when(screen){"history"->HistoryScreen(history);"result"->selected?.let{ResultScreen(it,result,onSave={history=history+it},onBack={screen="library"})};else->LibraryScreen(category,{category=it},{selected=it;showSheet=true})}}
   if(showSheet)UploadSheet(onDismiss={showSheet=false},onAlbum={albumLauncher.launch("image/*")},onCamera={cameraLauncher.launch(null)})
