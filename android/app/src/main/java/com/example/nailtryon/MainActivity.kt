@@ -36,6 +36,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.graphics.asImageBitmap
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.withContext
 
 private val Bg=Color(0xFFFBF9F7); private val Coral=Color(0xFFFF6168); private val Soft=Color(0xFFFFE9E9); private val Ink=Color(0xFF211F21); private val Muted=Color(0xFF777174)
@@ -43,8 +44,16 @@ private val Bg=Color(0xFFFBF9F7); private val Coral=Color(0xFFFF6168); private v
 class MainActivity:ComponentActivity(){override fun onCreate(b:Bundle?){super.onCreate(b);setContent{NailTryOnApp()}}}
 
 @Composable fun NailTryOnApp(generateTryOn: (suspend (Bitmap, Bitmap, NailStyle) -> Bitmap?)? = null){
- var category by remember{mutableStateOf(NailCatalog.categories.first())}; var selectedId by rememberSaveable{mutableStateOf<String?>(null)}; var showSheet by remember{mutableStateOf(false)}; var screen by remember{mutableStateOf("library")}; var history by remember{mutableStateOf(listOf<NailStyle>())}; var source by remember{mutableStateOf<Bitmap?>(null)}; var result by remember{mutableStateOf<Bitmap?>(null)}
+ var category by remember{mutableStateOf(NailCatalog.categories.first())}; var selectedId by rememberSaveable{mutableStateOf<String?>(null)}; var showSheet by remember{mutableStateOf(false)}; var screen by remember{mutableStateOf("library")}; var history by remember{mutableStateOf(listOf<TryOnHistoryEntry>())}; var source by remember{mutableStateOf<Bitmap?>(null)}; var result by remember{mutableStateOf<Bitmap?>(null)}
  val context=LocalContext.current
+ val historyStore=remember(context){TryOnHistoryStore.forContext(context.applicationContext)}
+ var historyLoaded by remember{mutableStateOf(false)}
+ LaunchedEffect(historyStore,screen){
+  if(!historyLoaded||screen=="history"){
+   history=withContext(Dispatchers.IO){historyStore.load()}
+   historyLoaded=true
+  }
+ }
  val gallerySave=rememberGallerySave()
  val selected=NailCatalog.styles.firstOrNull{it.id==selectedId} ?: if(selectedId=="custom")NailStyle("custom","我的美甲","自选美甲","")else null
  var customNailUri by rememberSaveable{mutableStateOf<String?>(null)}
@@ -59,7 +68,7 @@ class MainActivity:ComponentActivity(){override fun onCreate(b:Bundle?){super.on
  val cloudClient=remember{SeedreamTryOnClient("https://yviuahwjxdzgkuxjtwpd.supabase.co/functions/v1/seedream-tryon")}
  val albumLauncher=rememberLauncherForActivityResult(ActivityResultContracts.GetContent()){uri:Uri?->if(uri!=null){showSheet=false;source=decodeUri(context,uri);screen="result"}}
  val capturePhoto=rememberCameraCapture{bitmap->showSheet=false;source=bitmap;screen="result"}
- LaunchedEffect(screen,source,selected){
+ LaunchedEffect(source,selected){
   if(screen=="result"&&source!=null&&selected!=null){
    result=null
    val hand=source!!
@@ -67,11 +76,17 @@ class MainActivity:ComponentActivity(){override fun onCreate(b:Bundle?){super.on
    val nailRes=context.resources.getIdentifier(style.drawableName,"drawable",context.packageName)
    val nail=if(style.id=="custom")customNail else if(nailRes!=0) BitmapFactory.decodeResource(context.resources,nailRes) else null
    val cloudResult=nail?.let{if(generateTryOn!=null)generateTryOn(hand,it,style)else cloudClient.generate(hand,it,style)}
-   result=cloudResult ?: withContext(Dispatchers.Default){FusionEngine().compose(hand, styleColor(style))}
+   val completed=cloudResult ?: withContext(Dispatchers.Default){FusionEngine().compose(hand, styleColor(style))}
+   result=completed
+   try {
+    history=withContext(Dispatchers.IO){historyStore.save(style,completed);historyStore.load()}
+    historyLoaded=true
+   }catch(cancelled:CancellationException){throw cancelled}
+   catch(_:Exception){withContext(Dispatchers.Main.immediate){Toast.makeText(context,"试戴已生成，历史记录保存失败",Toast.LENGTH_LONG).show()}}
   }
  }
  Scaffold(containerColor=Bg,bottomBar={NavigationBar(containerColor=Color.White){NavigationBarItem(selected=screen=="library",onClick={screen="library"},icon={Text("✦")},label={Text("美甲库")});NavigationBarItem(selected=screen=="history",onClick={screen="history"},icon={Text("◷")},label={Text("历史")})}}){pad->
-  Box(Modifier.padding(pad).fillMaxSize()){when(screen){"history"->HistoryScreen(history);"result"->selected?.let{style->ResultScreen(style,result,saving=gallerySave.saving,onSave={photo->gallerySave.save(photo){history=history+style}},onBack={screen="library"})};else->LibraryScreen(category,{category=it},{selectedId=it.id;showSheet=true},onUploadNail={nailAlbumLauncher.launch("image/*")})}}
+  Box(Modifier.padding(pad).fillMaxSize()){when(screen){"history"->TryOnHistoryScreen(history,historyStore,historyLoaded);"result"->selected?.let{style->ResultScreen(style,result,saving=gallerySave.saving,onSave={photo->gallerySave.save(photo){}},onBack={screen="library"})};else->LibraryScreen(category,{category=it},{selectedId=it.id;showSheet=true},onUploadNail={nailAlbumLauncher.launch("image/*")})}}
   if(showSheet)UploadSheet(onDismiss={showSheet=false},onAlbum={albumLauncher.launch("image/*")},onCamera={showSheet=false;capturePhoto()})
  }
 }
@@ -98,6 +113,4 @@ private fun styleColor(style:NailStyle): Int = when(style.category){"纯色美�
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable private fun UploadSheet(onDismiss:()->Unit,onAlbum:()->Unit,onCamera:()->Unit){ModalBottomSheet(onDismissRequest=onDismiss,containerColor=Color.White){Column(Modifier.padding(24.dp).fillMaxWidth()){Text("选择照片",fontSize=18.sp,color=Ink);ListItem(headlineContent={Text("拍照")},leadingContent={Text("◉",color=Coral)},modifier=Modifier.clickable{onCamera()});ListItem(headlineContent={Text("从相册选择")},leadingContent={Text("▧",color=Coral)},modifier=Modifier.clickable{onAlbum()});TextButton(onClick=onDismiss,modifier=Modifier.align(Alignment.CenterHorizontally)){Text("取消",color=Muted)}}}}
 
-@Composable private fun ResultScreen(style:NailStyle,result:Bitmap?,saving:Boolean,onSave:(Bitmap)->Unit,onBack:()->Unit){Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp)){Row(verticalAlignment=Alignment.CenterVertically){Text("‹",fontSize=32.sp,modifier=Modifier.clickable{onBack()});Text("试戴效果",fontSize=20.sp,color=Ink,modifier=Modifier.padding(start=16.dp))};Spacer(Modifier.height(18.dp));Box(Modifier.fillMaxWidth().aspectRatio(.75f).background(Soft,RoundedCornerShape(18.dp)),contentAlignment=Alignment.Center){if(result==null){CircularProgressIndicator(color=Coral);Text("正在生成试戴效果",color=Muted,modifier=Modifier.padding(top=82.dp))}else Image(result.asImageBitmap(),contentDescription="试戴结果",contentScale=ContentScale.Crop,modifier=Modifier.fillMaxSize())};Text(style.name,fontSize=21.sp,color=Ink,modifier=Modifier.padding(top=18.dp));Text(style.category+" · 自然高光",fontSize=13.sp,color=Muted);Button(onClick={result?.let(onSave)},enabled=result!=null&&!saving,colors=ButtonDefaults.buttonColors(Coral),modifier=Modifier.fillMaxWidth().padding(top=24.dp)){Text(if(saving)"保存中…"else"保存")}}}
-
-@Composable private fun HistoryScreen(history:List<NailStyle>){Column(Modifier.fillMaxSize().padding(24.dp)){Text("历史记录",fontSize=23.sp,color=Ink);Text("回顾最近的试戴效果",fontSize=13.sp,color=Muted,modifier=Modifier.padding(top=6.dp));if(history.isEmpty())Text("还没有试戴记录",color=Muted,modifier=Modifier.padding(top=40.dp));history.forEach{style->Text(style.name,fontSize=16.sp,color=Ink,modifier=Modifier.padding(top=22.dp));Box(Modifier.fillMaxWidth().height(142.dp).background(Soft,RoundedCornerShape(16.dp)),contentAlignment=Alignment.BottomEnd){Text("刚刚",color=Color.White,modifier=Modifier.background(Color.Black.copy(alpha=.6f),RoundedCornerShape(14.dp)).padding(horizontal=12.dp,vertical=5.dp))}}}}
+@Composable private fun ResultScreen(style:NailStyle,result:Bitmap?,saving:Boolean,onSave:(Bitmap)->Unit,onBack:()->Unit){Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp)){Row(verticalAlignment=Alignment.CenterVertically){Text("‹",fontSize=32.sp,modifier=Modifier.clickable{onBack()});Text("试戴效果",fontSize=20.sp,color=Ink,modifier=Modifier.padding(start=16.dp))};Spacer(Modifier.height(18.dp));if(result==null){Box(Modifier.fillMaxWidth().aspectRatio(.75f).background(Soft,RoundedCornerShape(18.dp)),contentAlignment=Alignment.Center){CircularProgressIndicator(color=Coral);Text("正在生成试戴效果",color=Muted,modifier=Modifier.padding(top=82.dp))}}else TryOnPreview(result,"试戴结果",Modifier.testTag("result-image"));Text(style.name,fontSize=21.sp,color=Ink,modifier=Modifier.padding(top=18.dp));Text(style.category+" · 自然高光",fontSize=13.sp,color=Muted);Button(onClick={result?.let(onSave)},enabled=result!=null&&!saving,colors=ButtonDefaults.buttonColors(Coral),modifier=Modifier.fillMaxWidth().padding(top=24.dp)){Text(if(saving)"保存中…"else"保存")}}}
