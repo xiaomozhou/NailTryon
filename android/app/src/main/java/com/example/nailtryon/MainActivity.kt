@@ -23,6 +23,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.Image
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -84,7 +85,7 @@ private fun styleColor(style:NailStyle): Int = when(style.category){"纯色美�
 @Composable private fun LibraryScreen(category:String,onCategory:(String)->Unit,onStyle:(NailStyle)->Unit,onUploadNail:()->Unit){
  Column(Modifier.fillMaxSize().padding(horizontal=16.dp)){Row(Modifier.horizontalScroll(rememberScrollState()).padding(top=18.dp,bottom=12.dp),horizontalArrangement=Arrangement.spacedBy(8.dp)){NailCatalog.categories.forEach{c->FilterChip(selected=c==category,onClick={onCategory(c)},label={Text(c.removeSuffix("美甲"))})}}
  Row(Modifier.fillMaxWidth().background(Soft,RoundedCornerShape(16.dp)).clickable{onUploadNail()},verticalAlignment=Alignment.CenterVertically){Text("＋",color=Coral,fontSize=22.sp,modifier=Modifier.padding(start=16.dp));Text("上传我的美甲图",color=Coral,fontSize=14.sp,modifier=Modifier.padding(12.dp));Spacer(Modifier.weight(1f));Text("›",color=Coral,fontSize=22.sp,modifier=Modifier.padding(end=16.dp))}
- Spacer(Modifier.height(14.dp)); LazyVerticalGrid(columns=GridCells.Fixed(2),horizontalArrangement=Arrangement.spacedBy(12.dp),verticalArrangement=Arrangement.spacedBy(12.dp),modifier=Modifier.fillMaxSize()){items(NailCatalog.byCategory(category)){style->NailCard(style,onStyle)}}}
+ Spacer(Modifier.height(14.dp)); LazyVerticalGrid(columns=GridCells.Fixed(2),horizontalArrangement=Arrangement.spacedBy(12.dp),verticalArrangement=Arrangement.spacedBy(12.dp),modifier=Modifier.fillMaxSize().testTag("nail-catalog")){items(NailCatalog.byCategory(category)){style->NailCard(style,onStyle)}}}
 }
 
 @Composable private fun NailCard(style:NailStyle,onStyle:(NailStyle)->Unit){val ctx=LocalContext.current;val res=ctx.resources.getIdentifier(style.drawableName,"drawable",ctx.packageName);Card(colors=CardDefaults.cardColors(Color.White),shape=RoundedCornerShape(18.dp)){Column(Modifier.padding(8.dp)){if(res!=0)Image(painterResource(res),contentDescription=style.name,contentScale=ContentScale.Crop,modifier=Modifier.fillMaxWidth().height(138.dp).background(Soft,RoundedCornerShape(14.dp))) else Box(Modifier.fillMaxWidth().height(138.dp).background(Soft,RoundedCornerShape(14.dp)),contentAlignment=Alignment.Center){Text("美甲图",color=Muted,fontSize=13.sp)};Text(style.name,color=Ink,fontSize=14.sp,modifier=Modifier.padding(top=8.dp,start=4.dp));Text(style.category,color=Muted,fontSize=11.sp,modifier=Modifier.padding(start=4.dp,top=3.dp));Button(onClick={onStyle(style)},colors=ButtonDefaults.buttonColors(Coral),shape=RoundedCornerShape(18.dp),modifier=Modifier.fillMaxWidth().padding(top=6.dp)){Text("试戴",fontSize=12.sp)}}}}
