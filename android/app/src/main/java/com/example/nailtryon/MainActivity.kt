@@ -14,6 +14,7 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -44,6 +45,7 @@ class MainActivity:ComponentActivity(){override fun onCreate(b:Bundle?){super.on
 @Composable fun NailTryOnApp(generateTryOn: (suspend (Bitmap, Bitmap, NailStyle) -> Bitmap?)? = null){
  var category by remember{mutableStateOf(NailCatalog.categories.first())}; var selectedId by rememberSaveable{mutableStateOf<String?>(null)}; var showSheet by remember{mutableStateOf(false)}; var screen by remember{mutableStateOf("library")}; var history by remember{mutableStateOf(listOf<NailStyle>())}; var source by remember{mutableStateOf<Bitmap?>(null)}; var result by remember{mutableStateOf<Bitmap?>(null)}
  val context=LocalContext.current
+ val gallerySave=rememberGallerySave()
  val selected=NailCatalog.styles.firstOrNull{it.id==selectedId} ?: if(selectedId=="custom")NailStyle("custom","我的美甲","自选美甲","")else null
  var customNailUri by rememberSaveable{mutableStateOf<String?>(null)}
  val customNail=remember(customNailUri){customNailUri?.let{decodeUri(context,Uri.parse(it))}}
@@ -69,7 +71,7 @@ class MainActivity:ComponentActivity(){override fun onCreate(b:Bundle?){super.on
   }
  }
  Scaffold(containerColor=Bg,bottomBar={NavigationBar(containerColor=Color.White){NavigationBarItem(selected=screen=="library",onClick={screen="library"},icon={Text("✦")},label={Text("美甲库")});NavigationBarItem(selected=screen=="history",onClick={screen="history"},icon={Text("◷")},label={Text("历史")})}}){pad->
-  Box(Modifier.padding(pad).fillMaxSize()){when(screen){"history"->HistoryScreen(history);"result"->selected?.let{ResultScreen(it,result,onSave={history=history+it},onBack={screen="library"})};else->LibraryScreen(category,{category=it},{selectedId=it.id;showSheet=true},onUploadNail={nailAlbumLauncher.launch("image/*")})}}
+  Box(Modifier.padding(pad).fillMaxSize()){when(screen){"history"->HistoryScreen(history);"result"->selected?.let{style->ResultScreen(style,result,saving=gallerySave.saving,onSave={photo->gallerySave.save(photo){history=history+style}},onBack={screen="library"})};else->LibraryScreen(category,{category=it},{selectedId=it.id;showSheet=true},onUploadNail={nailAlbumLauncher.launch("image/*")})}}
   if(showSheet)UploadSheet(onDismiss={showSheet=false},onAlbum={albumLauncher.launch("image/*")},onCamera={showSheet=false;capturePhoto()})
  }
 }
@@ -96,6 +98,6 @@ private fun styleColor(style:NailStyle): Int = when(style.category){"纯色美�
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable private fun UploadSheet(onDismiss:()->Unit,onAlbum:()->Unit,onCamera:()->Unit){ModalBottomSheet(onDismissRequest=onDismiss,containerColor=Color.White){Column(Modifier.padding(24.dp).fillMaxWidth()){Text("选择照片",fontSize=18.sp,color=Ink);ListItem(headlineContent={Text("拍照")},leadingContent={Text("◉",color=Coral)},modifier=Modifier.clickable{onCamera()});ListItem(headlineContent={Text("从相册选择")},leadingContent={Text("▧",color=Coral)},modifier=Modifier.clickable{onAlbum()});TextButton(onClick=onDismiss,modifier=Modifier.align(Alignment.CenterHorizontally)){Text("取消",color=Muted)}}}}
 
-@Composable private fun ResultScreen(style:NailStyle,result:Bitmap?,onSave:()->Unit,onBack:()->Unit){Column(Modifier.fillMaxSize().padding(24.dp)){Row(verticalAlignment=Alignment.CenterVertically){Text("‹",fontSize=32.sp,modifier=Modifier.clickable{onBack()});Text("试戴效果",fontSize=20.sp,color=Ink,modifier=Modifier.padding(start=16.dp))};Spacer(Modifier.height(18.dp));Box(Modifier.fillMaxWidth().aspectRatio(.75f).background(Soft,RoundedCornerShape(18.dp)),contentAlignment=Alignment.Center){if(result==null){CircularProgressIndicator(color=Coral);Text("正在生成试戴效果",color=Muted,modifier=Modifier.padding(top=82.dp))}else Image(result.asImageBitmap(),contentDescription="试戴结果",contentScale=ContentScale.Crop,modifier=Modifier.fillMaxSize())};Text(style.name,fontSize=21.sp,color=Ink,modifier=Modifier.padding(top=18.dp));Text(style.category+" · 自然高光",fontSize=13.sp,color=Muted);Button(onClick=onSave,enabled=result!=null,colors=ButtonDefaults.buttonColors(Coral),modifier=Modifier.fillMaxWidth().padding(top=24.dp)){Text("保存")}}}
+@Composable private fun ResultScreen(style:NailStyle,result:Bitmap?,saving:Boolean,onSave:(Bitmap)->Unit,onBack:()->Unit){Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp)){Row(verticalAlignment=Alignment.CenterVertically){Text("‹",fontSize=32.sp,modifier=Modifier.clickable{onBack()});Text("试戴效果",fontSize=20.sp,color=Ink,modifier=Modifier.padding(start=16.dp))};Spacer(Modifier.height(18.dp));Box(Modifier.fillMaxWidth().aspectRatio(.75f).background(Soft,RoundedCornerShape(18.dp)),contentAlignment=Alignment.Center){if(result==null){CircularProgressIndicator(color=Coral);Text("正在生成试戴效果",color=Muted,modifier=Modifier.padding(top=82.dp))}else Image(result.asImageBitmap(),contentDescription="试戴结果",contentScale=ContentScale.Crop,modifier=Modifier.fillMaxSize())};Text(style.name,fontSize=21.sp,color=Ink,modifier=Modifier.padding(top=18.dp));Text(style.category+" · 自然高光",fontSize=13.sp,color=Muted);Button(onClick={result?.let(onSave)},enabled=result!=null&&!saving,colors=ButtonDefaults.buttonColors(Coral),modifier=Modifier.fillMaxWidth().padding(top=24.dp)){Text(if(saving)"保存中…"else"保存")}}}
 
 @Composable private fun HistoryScreen(history:List<NailStyle>){Column(Modifier.fillMaxSize().padding(24.dp)){Text("历史记录",fontSize=23.sp,color=Ink);Text("回顾最近的试戴效果",fontSize=13.sp,color=Muted,modifier=Modifier.padding(top=6.dp));if(history.isEmpty())Text("还没有试戴记录",color=Muted,modifier=Modifier.padding(top=40.dp));history.forEach{style->Text(style.name,fontSize=16.sp,color=Ink,modifier=Modifier.padding(top=22.dp));Box(Modifier.fillMaxWidth().height(142.dp).background(Soft,RoundedCornerShape(16.dp)),contentAlignment=Alignment.BottomEnd){Text("刚刚",color=Color.White,modifier=Modifier.background(Color.Black.copy(alpha=.6f),RoundedCornerShape(14.dp)).padding(horizontal=12.dp,vertical=5.dp))}}}}
