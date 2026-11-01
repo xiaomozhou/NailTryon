@@ -14,4 +14,4 @@ Open `android/` in Android Studio and run the `app` configuration. The debug APK
 
 ## AI integration
 
-The Seedream 4.5 integration is prepared as a server-side Supabase Edge Function. Keep the Volcengine API key in server secrets; never put it in the Android APK.
+The Seedream 5.0 Pro integration is prepared as a server-side Supabase Edge Function. Keep the Volcengine API key in server secrets; never put it in the Android APK.

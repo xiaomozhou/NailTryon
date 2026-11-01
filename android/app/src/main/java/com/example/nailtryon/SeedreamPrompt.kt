@@ -2,7 +2,7 @@
 
 /** Prompt contract shared by the future cloud provider and local fallback. */
 object SeedreamPrompt {
-    const val defaultModel = "doubao-seedream-4-5-251128"
+    const val defaultModel = "doubao-seedream-5-0-pro-260628"
 
     fun forStyle(style: NailStyle): String =
         "在保持手部姿态、肤色、背景、光线和构图不变的前提下，" +

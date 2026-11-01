@@ -5,8 +5,8 @@ import org.junit.Test
 
 class SeedreamPromptTest {
     @Test
-    fun usesPinnedSeedream45Model() {
-        assertTrue(SeedreamPrompt.defaultModel == "doubao-seedream-4-5-251128")
+    fun usesPinnedSeedream50ProModel() {
+        assertTrue(SeedreamPrompt.defaultModel == "doubao-seedream-5-0-pro-260628")
     }
 
     @Test

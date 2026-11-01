@@ -1,4 +1,4 @@
-﻿# Seedream 4.5 Edge Function
+# Seedream 5.0 Pro Edge Function
 
 This function keeps the Volcengine API key on the Supabase server and exposes a small app-facing contract:
 
@@ -14,10 +14,10 @@ This function keeps the Volcengine API key on the Supabase server and exposes a 
 
 The response contains `imageDataUrl` (preferred) or `imageUrl`, plus model usage information. `imageUrl` values returned by Seedream are temporary, so the client must save the result to Supabase Storage if history should persist.
 
-## Secrets to configure tomorrow
+## Secrets
 
 ```text
-supabase secrets set SEEDREAM_API_KEY=... SEEDREAM_MODEL=doubao-seedream-4-5-251128
+supabase secrets set SEEDREAM_API_KEY=... SEEDREAM_MODEL=doubao-seedream-5-0-pro-260628
 ```
 
 `DEMO_ACCESS_TOKEN` is optional. If set, the Android client must send it as `x-client-token`. Never put `SEEDREAM_API_KEY` in the APK.

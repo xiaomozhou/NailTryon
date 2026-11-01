@@ -1,7 +1,7 @@
 ﻿import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 
 const ARK_URL = "https://ark.cn-beijing.volces.com/api/v3/images/generations";
-const MODEL = Deno.env.get("SEEDREAM_MODEL") ?? "doubao-seedream-4-5-251128";
+const MODEL = Deno.env.get("SEEDREAM_MODEL") ?? "doubao-seedream-5-0-pro-260628";
 const API_KEY = Deno.env.get("SEEDREAM_API_KEY");
 const DEMO_TOKEN = Deno.env.get("DEMO_ACCESS_TOKEN");
 

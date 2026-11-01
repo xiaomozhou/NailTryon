@@ -1,4 +1,4 @@
-# Seedream 4.5 integration notes
+# Seedream 5.0 Pro integration notes
 
 The Android app keeps the local `FusionEngine` as a deterministic fallback. The cloud path is deliberately server-side:
 
@@ -7,4 +7,4 @@ The Android app keeps the local `FusionEngine` as a deterministic fallback. The 
 3. Decode the returned `imageDataUrl`, save the result to the local history, and fall back to `FusionEngine` when the network or model fails.
 4. Persist a copy to Storage if history needs to survive app restarts; Seedream's returned URLs are temporary.
 
-The Android `SeedreamTryOnClient` and request contract are now included. After the API key is available, wire the endpoint into the app configuration, add Storage upload, and enable the cloud feature flag while preserving the local fallback.
+The Android `SeedreamTryOnClient` and request contract are included. The production model is `doubao-seedream-5-0-pro-260628`; keep the API key in Supabase Edge Function Secrets and never in the APK.
