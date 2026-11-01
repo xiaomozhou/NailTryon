@@ -6,6 +6,7 @@ import android.graphics.BitmapFactory
 import android.graphics.ImageDecoder
 import android.net.Uri
 import android.provider.MediaStore
+import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.ComponentActivity
@@ -41,6 +42,14 @@ class MainActivity:ComponentActivity(){override fun onCreate(b:Bundle?){super.on
 @Composable fun NailTryOnApp(){
  var category by remember{mutableStateOf(NailCatalog.categories.first())}; var selected by remember{mutableStateOf<NailStyle?>(null)}; var showSheet by remember{mutableStateOf(false)}; var screen by remember{mutableStateOf("library")}; var history by remember{mutableStateOf(listOf<NailStyle>())}; var source by remember{mutableStateOf<Bitmap?>(null)}; var result by remember{mutableStateOf<Bitmap?>(null)}
  val context=LocalContext.current
+ var customNail by remember{mutableStateOf<Bitmap?>(null)}
+ val nailAlbumLauncher=rememberLauncherForActivityResult(ActivityResultContracts.GetContent()){uri:Uri?->
+  if(uri!=null){
+   val image=decodeUri(context,uri)
+   if(image!=null){customNail=image;selected=NailStyle("custom","我的美甲","自选美甲","");showSheet=true}
+   else Toast.makeText(context,"无法读取美甲图，请重新选择",Toast.LENGTH_SHORT).show()
+  }
+ }
  val cloudClient=remember{SeedreamTryOnClient("https://yviuahwjxdzgkuxjtwpd.supabase.co/functions/v1/seedream-tryon")}
  val albumLauncher=rememberLauncherForActivityResult(ActivityResultContracts.GetContent()){uri:Uri?->if(uri!=null){showSheet=false;source=decodeUri(context,uri);screen="result"}}
  val cameraLauncher=rememberLauncherForActivityResult(ActivityResultContracts.TakePicturePreview()){bitmap:Bitmap?->if(bitmap!=null){showSheet=false;source=bitmap;screen="result"}}
@@ -50,27 +59,31 @@ class MainActivity:ComponentActivity(){override fun onCreate(b:Bundle?){super.on
    val hand=source!!
    val style=selected!!
    val nailRes=context.resources.getIdentifier(style.drawableName,"drawable",context.packageName)
-   val nail=if(nailRes!=0) BitmapFactory.decodeResource(context.resources,nailRes) else null
+   val nail=if(style.id=="custom")customNail else if(nailRes!=0) BitmapFactory.decodeResource(context.resources,nailRes) else null
    val cloudResult=nail?.let{cloudClient.generate(hand, it, style)}
    result=cloudResult ?: withContext(Dispatchers.Default){FusionEngine().compose(hand, styleColor(style))}
   }
  }
  Scaffold(containerColor=Bg,bottomBar={NavigationBar(containerColor=Color.White){NavigationBarItem(selected=screen=="library",onClick={screen="library"},icon={Text("✦")},label={Text("美甲库")});NavigationBarItem(selected=screen=="history",onClick={screen="history"},icon={Text("◷")},label={Text("历史")})}}){pad->
-  Box(Modifier.padding(pad).fillMaxSize()){when(screen){"history"->HistoryScreen(history);"result"->selected?.let{ResultScreen(it,result,onSave={history=history+it},onBack={screen="library"})};else->LibraryScreen(category,{category=it},{selected=it;showSheet=true})}}
+  Box(Modifier.padding(pad).fillMaxSize()){when(screen){"history"->HistoryScreen(history);"result"->selected?.let{ResultScreen(it,result,onSave={history=history+it},onBack={screen="library"})};else->LibraryScreen(category,{category=it},{selected=it;showSheet=true},onUploadNail={nailAlbumLauncher.launch("image/*")})}}
   if(showSheet)UploadSheet(onDismiss={showSheet=false},onAlbum={albumLauncher.launch("image/*")},onCamera={cameraLauncher.launch(null)})
  }
 }
 
-private fun decodeUri(context: android.content.Context, uri: Uri): Bitmap? = runCatching {
-    if (android.os.Build.VERSION.SDK_INT >= 28) ImageDecoder.decodeBitmap(ImageDecoder.createSource(context.contentResolver, uri))
-    else MediaStore.Images.Media.getBitmap(context.contentResolver, uri)
-}.getOrNull()
+internal fun decodeUri(context: android.content.Context, uri: Uri): Bitmap? {
+    val decoded=if(android.os.Build.VERSION.SDK_INT>=28)runCatching {
+        ImageDecoder.decodeBitmap(ImageDecoder.createSource(context.contentResolver,uri)){decoder,_,_->
+            decoder.allocator=ImageDecoder.ALLOCATOR_SOFTWARE
+        }
+    }.getOrNull() else null
+    return decoded ?: runCatching {context.contentResolver.openInputStream(uri)?.use{BitmapFactory.decodeStream(it)}}.getOrNull()
+}
 
 private fun styleColor(style:NailStyle): Int = when(style.category){"纯色美甲"->android.graphics.Color.rgb(190,45,70);"幻彩美甲"->android.graphics.Color.rgb(170,220,210);"手绘美甲"->android.graphics.Color.rgb(120,80,110);"主题美甲"->android.graphics.Color.rgb(220,150,180);else->android.graphics.Color.rgb(220,160,125)}
 
-@Composable private fun LibraryScreen(category:String,onCategory:(String)->Unit,onStyle:(NailStyle)->Unit){
+@Composable private fun LibraryScreen(category:String,onCategory:(String)->Unit,onStyle:(NailStyle)->Unit,onUploadNail:()->Unit){
  Column(Modifier.fillMaxSize().padding(horizontal=16.dp)){Row(Modifier.horizontalScroll(rememberScrollState()).padding(top=18.dp,bottom=12.dp),horizontalArrangement=Arrangement.spacedBy(8.dp)){NailCatalog.categories.forEach{c->FilterChip(selected=c==category,onClick={onCategory(c)},label={Text(c.removeSuffix("美甲"))})}}
- Row(Modifier.fillMaxWidth().background(Soft,RoundedCornerShape(16.dp)).clickable{},verticalAlignment=Alignment.CenterVertically){Text("＋",color=Coral,fontSize=22.sp,modifier=Modifier.padding(start=16.dp));Text("上传我的美甲图",color=Coral,fontSize=14.sp,modifier=Modifier.padding(12.dp));Spacer(Modifier.weight(1f));Text("›",color=Coral,fontSize=22.sp,modifier=Modifier.padding(end=16.dp))}
+ Row(Modifier.fillMaxWidth().background(Soft,RoundedCornerShape(16.dp)).clickable{onUploadNail()},verticalAlignment=Alignment.CenterVertically){Text("＋",color=Coral,fontSize=22.sp,modifier=Modifier.padding(start=16.dp));Text("上传我的美甲图",color=Coral,fontSize=14.sp,modifier=Modifier.padding(12.dp));Spacer(Modifier.weight(1f));Text("›",color=Coral,fontSize=22.sp,modifier=Modifier.padding(end=16.dp))}
  Spacer(Modifier.height(14.dp)); LazyVerticalGrid(columns=GridCells.Fixed(2),horizontalArrangement=Arrangement.spacedBy(12.dp),verticalArrangement=Arrangement.spacedBy(12.dp),modifier=Modifier.fillMaxSize()){items(NailCatalog.byCategory(category)){style->NailCard(style,onStyle)}}}
 }
 
