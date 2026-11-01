@@ -2,6 +2,7 @@
 
 import android.os.Bundle
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.ImageDecoder
 import android.net.Uri
 import android.provider.MediaStore
@@ -48,7 +49,9 @@ class MainActivity:ComponentActivity(){override fun onCreate(b:Bundle?){super.on
    result=null
    val hand=source!!
    val style=selected!!
-   val cloudResult=cloudClient.generate(hand, style)
+   val nailRes=context.resources.getIdentifier(style.drawableName,"drawable",context.packageName)
+   val nail=if(nailRes!=0) BitmapFactory.decodeResource(context.resources,nailRes) else null
+   val cloudResult=nail?.let{cloudClient.generate(hand, it, style)}
    result=cloudResult ?: withContext(Dispatchers.Default){FusionEngine().compose(hand, styleColor(style))}
   }
  }
