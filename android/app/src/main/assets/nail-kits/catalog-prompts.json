@@ -1,0 +1,1402 @@
+{
+  "nail_cherry": {
+    "source": "nail_cherry.png",
+    "sourceSha256": "87d95cd91636505611d34f6ce8ddbb5fe901da3880f0baf48eca83df4227628d",
+    "width": 1200,
+    "height": 1200,
+    "leftMarked": false,
+    "thumbAtStart": false,
+    "prompts": [
+      {
+        "point": [
+          535,
+          370
+        ],
+        "box": [
+          450,
+          256,
+          620,
+          484
+        ]
+      },
+      {
+        "point": [
+          615,
+          402
+        ],
+        "box": [
+          522,
+          280,
+          708,
+          524
+        ]
+      },
+      {
+        "point": [
+          700,
+          436
+        ],
+        "box": [
+          600,
+          306,
+          800,
+          566
+        ]
+      },
+      {
+        "point": [
+          795,
+          466
+        ],
+        "box": [
+          689,
+          332,
+          901,
+          600
+        ]
+      },
+      {
+        "point": [
+          899,
+          498
+        ],
+        "box": [
+          777,
+          352,
+          1021,
+          644
+        ]
+      }
+    ]
+  },
+  "nail_blueberry": {
+    "source": "nail_blueberry.png",
+    "sourceSha256": "cd401993d5f67ffbff9de34d8848f01e56e3a5644eab798bbffe336e9908ac25",
+    "width": 1200,
+    "height": 1200,
+    "leftMarked": false,
+    "thumbAtStart": false,
+    "prompts": [
+      {
+        "point": [
+          582,
+          409
+        ],
+        "box": [
+          507,
+          306,
+          657,
+          512
+        ]
+      },
+      {
+        "point": [
+          650,
+          439
+        ],
+        "box": [
+          565,
+          326,
+          735,
+          552
+        ]
+      },
+      {
+        "point": [
+          733,
+          469
+        ],
+        "box": [
+          644,
+          352,
+          822,
+          586
+        ]
+      },
+      {
+        "point": [
+          818,
+          498
+        ],
+        "box": [
+          722,
+          376,
+          914,
+          620
+        ]
+      },
+      {
+        "point": [
+          910,
+          530
+        ],
+        "box": [
+          797,
+          395,
+          1023,
+          665
+        ]
+      }
+    ]
+  },
+  "nail_lemon": {
+    "source": "nail_lemon.png",
+    "sourceSha256": "6723e4f751e8bf31d14b244c9384c19b47644aaa8723f74c233493a29a5073da",
+    "width": 1200,
+    "height": 1200,
+    "leftMarked": false,
+    "thumbAtStart": false,
+    "prompts": [
+      {
+        "point": [
+          641,
+          345
+        ],
+        "box": [
+          551,
+          246,
+          731,
+          444
+        ]
+      },
+      {
+        "point": [
+          699,
+          393
+        ],
+        "box": [
+          601,
+          284,
+          797,
+          502
+        ]
+      },
+      {
+        "point": [
+          769,
+          434
+        ],
+        "box": [
+          665,
+          320,
+          873,
+          548
+        ]
+      },
+      {
+        "point": [
+          845,
+          478
+        ],
+        "box": [
+          734,
+          358,
+          956,
+          598
+        ]
+      },
+      {
+        "point": [
+          926,
+          535
+        ],
+        "box": [
+          798,
+          399,
+          1054,
+          671
+        ]
+      }
+    ]
+  },
+  "nail_pink": {
+    "source": "nail_pink.png",
+    "sourceSha256": "975e4255dd75d91e8b41f8b5af32551a1a84896d8520fda2507455fd374b5e11",
+    "width": 1200,
+    "height": 1200,
+    "leftMarked": false,
+    "thumbAtStart": false,
+    "prompts": [
+      {
+        "point": [
+          641,
+          344
+        ],
+        "box": [
+          544,
+          231,
+          738,
+          457
+        ]
+      },
+      {
+        "point": [
+          711,
+          385
+        ],
+        "box": [
+          604,
+          261,
+          818,
+          509
+        ]
+      },
+      {
+        "point": [
+          791,
+          439
+        ],
+        "box": [
+          678,
+          310,
+          904,
+          568
+        ]
+      },
+      {
+        "point": [
+          873,
+          476
+        ],
+        "box": [
+          757,
+          344,
+          989,
+          608
+        ]
+      },
+      {
+        "point": [
+          973,
+          536
+        ],
+        "box": [
+          835,
+          383,
+          1111,
+          689
+        ]
+      }
+    ]
+  },
+  "nail_cat": {
+    "source": "nail_cat.jpg",
+    "sourceSha256": "3e2de914ed3ee69feb6459dffcb28818b6d61a7a97d4425e1e93decbe81d7766",
+    "width": 1244,
+    "height": 1252,
+    "leftMarked": true,
+    "thumbAtStart": true,
+    "prompts": [
+      {
+        "point": [
+          395,
+          438
+        ],
+        "box": [
+          317,
+          336,
+          473,
+          540
+        ]
+      },
+      {
+        "point": [
+          508,
+          450
+        ],
+        "box": [
+          448,
+          358,
+          568,
+          542
+        ]
+      },
+      {
+        "point": [
+          606,
+          450
+        ],
+        "box": [
+          547,
+          358,
+          665,
+          542
+        ]
+      },
+      {
+        "point": [
+          698,
+          449
+        ],
+        "box": [
+          642,
+          360,
+          754,
+          538
+        ]
+      },
+      {
+        "point": [
+          783,
+          448
+        ],
+        "box": [
+          736,
+          366,
+          830,
+          530
+        ]
+      }
+    ]
+  },
+  "nail_dog": {
+    "source": "nail_dog.jpg",
+    "sourceSha256": "1ba138df679c97bf67e636544a7108f51714e47b58b5a0b56d0f7e9a9fd3e9af",
+    "width": 1200,
+    "height": 1200,
+    "leftMarked": false,
+    "thumbAtStart": true,
+    "prompts": [
+      {
+        "point": [
+          420,
+          600
+        ],
+        "box": [
+          320,
+          465,
+          520,
+          735
+        ]
+      },
+      {
+        "point": [
+          523,
+          625
+        ],
+        "box": [
+          446,
+          507,
+          600,
+          743
+        ]
+      },
+      {
+        "point": [
+          620,
+          648
+        ],
+        "box": [
+          545,
+          530,
+          695,
+          766
+        ]
+      },
+      {
+        "point": [
+          718,
+          660
+        ],
+        "box": [
+          645,
+          549,
+          791,
+          771
+        ]
+      },
+      {
+        "point": [
+          807,
+          673
+        ],
+        "box": [
+          744,
+          568,
+          870,
+          778
+        ]
+      }
+    ]
+  },
+  "nail_flowers": {
+    "source": "nail_flowers.jpg",
+    "sourceSha256": "a17fe6d324fae427f0889ae28dc7d4899ab6c802db8cd10346deeedc6740b289",
+    "width": 1200,
+    "height": 1200,
+    "leftMarked": false,
+    "thumbAtStart": true,
+    "prompts": [
+      {
+        "point": [
+          388,
+          595
+        ],
+        "box": [
+          283,
+          450,
+          493,
+          740
+        ]
+      },
+      {
+        "point": [
+          496,
+          614
+        ],
+        "box": [
+          415,
+          487,
+          577,
+          741
+        ]
+      },
+      {
+        "point": [
+          601,
+          629
+        ],
+        "box": [
+          521,
+          502,
+          681,
+          756
+        ]
+      },
+      {
+        "point": [
+          698,
+          650
+        ],
+        "box": [
+          621,
+          529,
+          775,
+          771
+        ]
+      },
+      {
+        "point": [
+          785,
+          666
+        ],
+        "box": [
+          717,
+          552,
+          853,
+          780
+        ]
+      }
+    ]
+  },
+  "nail_mist": {
+    "source": "nail_mist.jpg",
+    "sourceSha256": "51d69cc62691e31ab300932b64394c36fe293bbf6cf5b3e0c629927c855bfcba",
+    "width": 1200,
+    "height": 1200,
+    "leftMarked": false,
+    "thumbAtStart": true,
+    "prompts": [
+      {
+        "point": [
+          425,
+          647
+        ],
+        "box": [
+          321,
+          511,
+          529,
+          783
+        ]
+      },
+      {
+        "point": [
+          548,
+          665
+        ],
+        "box": [
+          467,
+          545,
+          629,
+          785
+        ]
+      },
+      {
+        "point": [
+          654,
+          685
+        ],
+        "box": [
+          575,
+          565,
+          733,
+          805
+        ]
+      },
+      {
+        "point": [
+          755,
+          702
+        ],
+        "box": [
+          678,
+          587,
+          832,
+          817
+        ]
+      },
+      {
+        "point": [
+          860,
+          718
+        ],
+        "box": [
+          794,
+          612,
+          926,
+          824
+        ]
+      }
+    ]
+  },
+  "nail_petals": {
+    "source": "nail_petals.jpg",
+    "sourceSha256": "a62ca358cd0f0052578e50e7fbae7b18206e7c27ea522addf594a42fba619fa7",
+    "width": 1200,
+    "height": 1200,
+    "leftMarked": false,
+    "thumbAtStart": true,
+    "prompts": [
+      {
+        "point": [
+          392,
+          495
+        ],
+        "box": [
+          275,
+          346,
+          509,
+          644
+        ]
+      },
+      {
+        "point": [
+          510,
+          531
+        ],
+        "box": [
+          418,
+          401,
+          602,
+          661
+        ]
+      },
+      {
+        "point": [
+          622,
+          551
+        ],
+        "box": [
+          530,
+          421,
+          714,
+          681
+        ]
+      },
+      {
+        "point": [
+          729,
+          581
+        ],
+        "box": [
+          642,
+          454,
+          816,
+          708
+        ]
+      },
+      {
+        "point": [
+          832,
+          604
+        ],
+        "box": [
+          757,
+          491,
+          907,
+          717
+        ]
+      }
+    ]
+  },
+  "nail_spring": {
+    "source": "nail_spring.jpg",
+    "sourceSha256": "5629597673ffdf985c337dd48970dcb976a8bd55092fd4f6e43aabd41a7b77d9",
+    "width": 1258,
+    "height": 1248,
+    "leftMarked": true,
+    "thumbAtStart": true,
+    "prompts": [
+      {
+        "point": [
+          530,
+          461
+        ],
+        "box": [
+          409,
+          329,
+          651,
+          593
+        ]
+      },
+      {
+        "point": [
+          631,
+          502
+        ],
+        "box": [
+          535,
+          389,
+          727,
+          615
+        ]
+      },
+      {
+        "point": [
+          723,
+          545
+        ],
+        "box": [
+          628,
+          433,
+          818,
+          657
+        ]
+      },
+      {
+        "point": [
+          816,
+          587
+        ],
+        "box": [
+          724,
+          478,
+          908,
+          696
+        ]
+      },
+      {
+        "point": [
+          902,
+          628
+        ],
+        "box": [
+          822,
+          530,
+          982,
+          726
+        ]
+      }
+    ]
+  },
+  "nail_sunset": {
+    "source": "nail_sunset.jpg",
+    "sourceSha256": "c5d4802cba9d509e3fe01074d9d3fa40c429680050779ac63c2f33a04b7c0a52",
+    "width": 1220,
+    "height": 1134,
+    "leftMarked": true,
+    "thumbAtStart": true,
+    "prompts": [
+      {
+        "point": [
+          360,
+          450
+        ],
+        "box": [
+          249,
+          313,
+          471,
+          587
+        ]
+      },
+      {
+        "point": [
+          487,
+          425
+        ],
+        "box": [
+          401,
+          307,
+          573,
+          543
+        ]
+      },
+      {
+        "point": [
+          597,
+          400
+        ],
+        "box": [
+          512,
+          282,
+          682,
+          518
+        ]
+      },
+      {
+        "point": [
+          704,
+          371
+        ],
+        "box": [
+          622,
+          258,
+          786,
+          484
+        ]
+      },
+      {
+        "point": [
+          795,
+          350
+        ],
+        "box": [
+          724,
+          248,
+          866,
+          452
+        ]
+      }
+    ]
+  },
+  "nail_honey": {
+    "source": "nail_honey.jpg",
+    "sourceSha256": "bcc410e2b5a9529fa42e97d5e575e455ebab2137689a3da7ee6f9e1fa2b9500a",
+    "width": 1080,
+    "height": 1061,
+    "leftMarked": true,
+    "thumbAtStart": true,
+    "prompts": [
+      {
+        "point": [
+          390,
+          222
+        ],
+        "box": [
+          213,
+          0,
+          567,
+          444
+        ]
+      },
+      {
+        "point": [
+          520,
+          288
+        ],
+        "box": [
+          371,
+          92,
+          669,
+          484
+        ]
+      },
+      {
+        "point": [
+          645,
+          340
+        ],
+        "box": [
+          501,
+          148,
+          789,
+          532
+        ]
+      },
+      {
+        "point": [
+          770,
+          391
+        ],
+        "box": [
+          634,
+          208,
+          906,
+          574
+        ]
+      },
+      {
+        "point": [
+          876,
+          450
+        ],
+        "box": [
+          752,
+          281,
+          1000,
+          619
+        ]
+      }
+    ]
+  },
+  "nail_kitten": {
+    "source": "nail_kitten.jpg",
+    "sourceSha256": "3f99d793b14bd67e083dbd68d6626119f8afa070d7bddf368590f649fd585e26",
+    "width": 1080,
+    "height": 1069,
+    "leftMarked": true,
+    "thumbAtStart": true,
+    "prompts": [
+      {
+        "point": [
+          365,
+          275
+        ],
+        "box": [
+          198,
+          43,
+          532,
+          507
+        ]
+      },
+      {
+        "point": [
+          533,
+          320
+        ],
+        "box": [
+          394,
+          113,
+          672,
+          527
+        ]
+      },
+      {
+        "point": [
+          650,
+          368
+        ],
+        "box": [
+          514,
+          164,
+          786,
+          572
+        ]
+      },
+      {
+        "point": [
+          785,
+          421
+        ],
+        "box": [
+          658,
+          229,
+          912,
+          613
+        ]
+      },
+      {
+        "point": [
+          905,
+          458
+        ],
+        "box": [
+          791,
+          279,
+          1019,
+          637
+        ]
+      }
+    ]
+  },
+  "nail_leopard": {
+    "source": "nail_leopard.png",
+    "sourceSha256": "01cdc7e61dd2ae31cdd5f6a7509ab9e71442cb3753c71925203e3a01a042464d",
+    "width": 1200,
+    "height": 1200,
+    "leftMarked": true,
+    "thumbAtStart": true,
+    "prompts": [
+      {
+        "point": [
+          525,
+          245
+        ],
+        "box": [
+          322,
+          24,
+          728,
+          466
+        ]
+      },
+      {
+        "point": [
+          668,
+          355
+        ],
+        "box": [
+          496,
+          163,
+          840,
+          547
+        ]
+      },
+      {
+        "point": [
+          810,
+          443
+        ],
+        "box": [
+          640,
+          252,
+          980,
+          634
+        ]
+      },
+      {
+        "point": [
+          937,
+          515
+        ],
+        "box": [
+          774,
+          333,
+          1100,
+          697
+        ]
+      },
+      {
+        "point": [
+          1032,
+          608
+        ],
+        "box": [
+          890,
+          448,
+          1174,
+          768
+        ]
+      }
+    ]
+  },
+  "nail_ballet": {
+    "source": "nail_ballet.jpg",
+    "sourceSha256": "7485de7a25b25bbb457dea931897f930136c3ccc2fbcdbed0723609160d0a4bc",
+    "width": 1200,
+    "height": 1200,
+    "leftMarked": true,
+    "thumbAtStart": true,
+    "prompts": [
+      {
+        "point": [
+          360,
+          365
+        ],
+        "box": [
+          247,
+          189,
+          473,
+          541
+        ]
+      },
+      {
+        "point": [
+          504,
+          378
+        ],
+        "box": [
+          415,
+          216,
+          593,
+          540
+        ]
+      },
+      {
+        "point": [
+          643,
+          395
+        ],
+        "box": [
+          555,
+          235,
+          731,
+          555
+        ]
+      },
+      {
+        "point": [
+          779,
+          411
+        ],
+        "box": [
+          695,
+          258,
+          863,
+          564
+        ]
+      },
+      {
+        "point": [
+          897,
+          411
+        ],
+        "box": [
+          827,
+          272,
+          967,
+          550
+        ]
+      }
+    ]
+  },
+  "nail_pearls": {
+    "source": "nail_pearls.jpg",
+    "sourceSha256": "749eb1a0245162156e2cb29482d8fc41580019f102cb9f0f3c37d0245c17c7e0",
+    "width": 1200,
+    "height": 1200,
+    "leftMarked": true,
+    "thumbAtStart": true,
+    "prompts": [
+      {
+        "point": [
+          389,
+          321
+        ],
+        "box": [
+          266,
+          123,
+          512,
+          519
+        ]
+      },
+      {
+        "point": [
+          538,
+          343
+        ],
+        "box": [
+          441,
+          167,
+          635,
+          519
+        ]
+      },
+      {
+        "point": [
+          666,
+          361
+        ],
+        "box": [
+          571,
+          185,
+          761,
+          537
+        ]
+      },
+      {
+        "point": [
+          792,
+          377
+        ],
+        "box": [
+          701,
+          208,
+          883,
+          546
+        ]
+      },
+      {
+        "point": [
+          901,
+          377
+        ],
+        "box": [
+          824,
+          219,
+          978,
+          535
+        ]
+      }
+    ]
+  },
+  "nail_ribbon": {
+    "source": "nail_ribbon.jpg",
+    "sourceSha256": "d8f734c7c79490825415549a493bfd863bed9a5d77a4f6f1ba6d34407293706b",
+    "width": 1200,
+    "height": 1200,
+    "leftMarked": true,
+    "thumbAtStart": true,
+    "prompts": [
+      {
+        "point": [
+          440,
+          275
+        ],
+        "box": [
+          255,
+          47,
+          625,
+          503
+        ]
+      },
+      {
+        "point": [
+          630,
+          340
+        ],
+        "box": [
+          474,
+          138,
+          786,
+          542
+        ]
+      },
+      {
+        "point": [
+          750,
+          420
+        ],
+        "box": [
+          597,
+          220,
+          903,
+          620
+        ]
+      },
+      {
+        "point": [
+          880,
+          480
+        ],
+        "box": [
+          735,
+          290,
+          1025,
+          670
+        ]
+      },
+      {
+        "point": [
+          1000,
+          545
+        ],
+        "box": [
+          873,
+          372,
+          1127,
+          718
+        ]
+      }
+    ]
+  },
+  "nail_star": {
+    "source": "nail_star.jpg",
+    "sourceSha256": "a5cbf700e06daade0e932d1407f2937ff59c8fd1de5425151657636f189b79f1",
+    "width": 1080,
+    "height": 1098,
+    "leftMarked": true,
+    "thumbAtStart": true,
+    "prompts": [
+      {
+        "point": [
+          390,
+          220
+        ],
+        "box": [
+          211,
+          0,
+          569,
+          441
+        ]
+      },
+      {
+        "point": [
+          525,
+          295
+        ],
+        "box": [
+          371,
+          97,
+          679,
+          493
+        ]
+      },
+      {
+        "point": [
+          650,
+          350
+        ],
+        "box": [
+          501,
+          155,
+          799,
+          545
+        ]
+      },
+      {
+        "point": [
+          780,
+          420
+        ],
+        "box": [
+          640,
+          237,
+          920,
+          603
+        ]
+      },
+      {
+        "point": [
+          895,
+          470
+        ],
+        "box": [
+          768,
+          301,
+          1022,
+          639
+        ]
+      }
+    ]
+  },
+  "nail_tweed": {
+    "source": "nail_tweed.jpg",
+    "sourceSha256": "5687b4e3609bc8fd644063c170a1dec0ca49d3bf9f3c2b5d91acbb6d5ada76f4",
+    "width": 1200,
+    "height": 1200,
+    "leftMarked": false,
+    "thumbAtStart": true,
+    "prompts": [
+      {
+        "point": [
+          408,
+          405
+        ],
+        "box": [
+          271,
+          242,
+          545,
+          568
+        ]
+      },
+      {
+        "point": [
+          543,
+          443
+        ],
+        "box": [
+          434,
+          303,
+          652,
+          583
+        ]
+      },
+      {
+        "point": [
+          644,
+          487
+        ],
+        "box": [
+          537,
+          349,
+          751,
+          625
+        ]
+      },
+      {
+        "point": [
+          759,
+          529
+        ],
+        "box": [
+          659,
+          400,
+          859,
+          658
+        ]
+      },
+      {
+        "point": [
+          850,
+          553
+        ],
+        "box": [
+          766,
+          440,
+          934,
+          666
+        ]
+      }
+    ]
+  },
+  "nail_wine": {
+    "source": "nail_wine.jpg",
+    "sourceSha256": "54046ad5a9348a92fde73e3ee0d9a7f67b2eb1bc27e10cf1014822307eed572c",
+    "width": 1200,
+    "height": 1200,
+    "leftMarked": false,
+    "thumbAtStart": true,
+    "prompts": [
+      {
+        "point": [
+          452,
+          580
+        ],
+        "box": [
+          352,
+          446,
+          552,
+          714
+        ]
+      },
+      {
+        "point": [
+          570,
+          593
+        ],
+        "box": [
+          494,
+          477,
+          646,
+          709
+        ]
+      },
+      {
+        "point": [
+          670,
+          611
+        ],
+        "box": [
+          595,
+          495,
+          745,
+          727
+        ]
+      },
+      {
+        "point": [
+          771,
+          623
+        ],
+        "box": [
+          698,
+          511,
+          844,
+          735
+        ]
+      },
+      {
+        "point": [
+          860,
+          636
+        ],
+        "box": [
+          799,
+          533,
+          921,
+          739
+        ]
+      }
+    ]
+  }
+}

@@ -4,12 +4,14 @@ import android.app.Activity
 import android.content.Intent
 import android.graphics.Bitmap
 import android.net.Uri
+import androidx.activity.compose.setContent
 import java.io.File
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import org.junit.Assert.*
 import org.junit.Rule
+import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -22,6 +24,11 @@ import org.robolectric.annotation.GraphicsMode
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class NailUploadTest {
     @get:Rule val compose = createAndroidComposeRule<MainActivity>()
+    @Before fun configurePreprocessing() {
+        compose.runOnUiThread { compose.activity.setContent {
+            NailTryOnApp(kitAnalyzer={_,_->NailKitAnalysis(emptyList(),KitSelection(null,"请点选五片美甲",true))})
+        } }
+    }
 
     @Test fun uploadEntryLaunchesImagePickerAndCancellationKeepsLibraryUsable() {
         compose.onNodeWithText("上传我的美甲图").performClick()
@@ -35,7 +42,7 @@ class NailUploadTest {
         assertEquals(Intent.ACTION_GET_CONTENT, activity.nextStartedActivityForResult.intent.action)
     }
 
-    @Test fun selectedCustomImageContinuesToHandPhotoSheet() {
+    @Test fun selectedCustomImageOpensPreprocessingBeforeChoosingHandPhoto() {
         val photo = File(compose.activity.cacheDir, "custom-nail.jpg")
         photo.outputStream().use { Bitmap.createBitmap(64, 64, Bitmap.Config.ARGB_8888).compress(Bitmap.CompressFormat.JPEG, 90, it) }
         assertNotNull("The selected photo must be decodable", decodeUri(compose.activity, Uri.fromFile(photo)))
@@ -45,7 +52,7 @@ class NailUploadTest {
         compose.runOnUiThread {
             activity.receiveResult(request.intent, Activity.RESULT_OK, Intent().setData(Uri.fromFile(photo)))
         }
-        compose.onNodeWithText("选择照片").assertExists()
-        compose.onNodeWithText("从相册选择").assertExists()
+        compose.onNodeWithText("准备五片美甲").assertExists()
+        compose.onNodeWithText("选择照片").assertDoesNotExist()
     }
 }

@@ -1,0 +1,20 @@
+MobileSAM press-on-nail preprocessing
+
+Original project: https://github.com/ChaoningZhang/MobileSAM (Apache-2.0)
+Includes the Segment Anything model architecture originating from Meta (Apache-2.0).
+Original license is included as LICENSE.MobileSAM.txt.
+
+ONNX exports: https://huggingface.co/Acly/MobileSAM
+Pinned revision: 0d3b403339b4674a82493d5e97964dd78089ddc8
+The publisher model card declares MIT; its README describes the original MobileSAM
+weights and the encoder export's built-in RGB normalization and bottom/right padding.
+Files are unmodified and checked by SHA-256 in NailKitModelTest.
+
+mobile_sam_image_encoder.onnx
+580f5fb648ea1062c0aabc26217aed56921985f03f0cbbd852bba81d760cc749
+sam_mask_decoder_single.onnx
+93915fc7c993ab9d59ab8c9ccd3bce37f7509c81ab4150a74abd4d2abbd8570d
+
+The Kotlin inference adapter and preprocessing/export logic are implemented in this
+project. Prepared catalog PNGs retain the user's original supplied image colors.
+Catalog prompts identify a visually checked row; they are not generated hand poses.

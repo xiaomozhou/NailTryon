@@ -25,6 +25,7 @@ dependencies {
     implementation("androidx.camera:camera-lifecycle:1.4.1")
     implementation("androidx.camera:camera-view:1.4.1")
     implementation("com.microsoft.onnxruntime:onnxruntime-android:1.20.0")
+    implementation("com.google.mlkit:text-recognition-chinese:16.0.1")
     // Same Java API/native engine on the Windows host: model tests run real CPU inference.
     testRuntimeOnly("com.microsoft.onnxruntime:onnxruntime:1.20.0")
     implementation("androidx.compose.ui:ui")

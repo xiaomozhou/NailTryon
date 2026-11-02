@@ -46,6 +46,7 @@ class MainActivity:ComponentActivity(){override fun onCreate(b:Bundle?){super.on
 @Composable internal fun NailTryOnApp(
  generateTryOn: (suspend (Bitmap, Bitmap, NailStyle) -> Bitmap?)? = null,
  albumInspector: suspend (android.content.Context,Bitmap)->AlbumHandCheck = ::inspectAlbumHand,
+ kitAnalyzer: suspend (android.content.Context,Bitmap)->NailKitAnalysis = ::analyzeNailKit,
 ){
  var category by remember{mutableStateOf(NailCatalog.categories.first())}; var selectedId by rememberSaveable{mutableStateOf<String?>(null)}; var showSheet by remember{mutableStateOf(false)}; var screen by remember{mutableStateOf("library")}; var history by remember{mutableStateOf(listOf<TryOnHistoryEntry>())}; var source by remember{mutableStateOf<Bitmap?>(null)}; var result by remember{mutableStateOf<Bitmap?>(null)}
  val context=LocalContext.current
@@ -60,12 +61,10 @@ class MainActivity:ComponentActivity(){override fun onCreate(b:Bundle?){super.on
  val gallerySave=rememberGallerySave()
  val selected=NailCatalog.styles.firstOrNull{it.id==selectedId} ?: if(selectedId=="custom")NailStyle("custom","我的美甲","自选美甲","")else null
  var customNailUri by rememberSaveable{mutableStateOf<String?>(null)}
- val customNail=remember(customNailUri){customNailUri?.let{decodeUri(context,Uri.parse(it))}}
+ var customKitDirectory by rememberSaveable{mutableStateOf<String?>(null)}
  val nailAlbumLauncher=rememberLauncherForActivityResult(ActivityResultContracts.GetContent()){uri:Uri?->
   if(uri!=null){
-   val image=decodeUri(context,uri)
-   if(image!=null){customNailUri=uri.toString();selectedId="custom";showSheet=true}
-   else Toast.makeText(context,"无法读取美甲图，请重新选择",Toast.LENGTH_SHORT).show()
+   customNailUri=uri.toString();customKitDirectory=null;selectedId="custom";showSheet=false;screen="kit-review"
   }
  }
  val cloudClient=remember{SeedreamTryOnClient("https://yviuahwjxdzgkuxjtwpd.supabase.co/functions/v1/seedream-tryon")}
@@ -77,9 +76,12 @@ class MainActivity:ComponentActivity(){override fun onCreate(b:Bundle?){super.on
    result=null
    val hand=source!!
    val style=selected!!
-   val nailRes=context.resources.getIdentifier(style.drawableName,"drawable",context.packageName)
-   val nail=if(style.id=="custom")customNail else if(nailRes!=0) BitmapFactory.decodeResource(context.resources,nailRes) else null
-   val cloudResult=nail?.let{if(generateTryOn!=null)generateTryOn(hand,it,style)else cloudClient.generate(hand,it,style)}
+   val nail=withContext(Dispatchers.IO){runCatching{
+    if(style.id=="custom")customKitDirectory?.let{BitmapFactory.decodeFile(java.io.File(it,"reference.png").absolutePath)}
+    else NailKitStore.catalogReference(context,style.drawableName)
+   }.getOrNull()}
+   if(nail==null){Toast.makeText(context,"美甲预处理结果不可用，请重新选择",Toast.LENGTH_LONG).show();screen="library";return@LaunchedEffect}
+   val cloudResult=if(generateTryOn!=null)generateTryOn(hand,nail,style)else cloudClient.generate(hand,nail,style)
    val completed=cloudResult ?: withContext(Dispatchers.Default){FusionEngine().compose(hand, styleColor(style))}
    result=completed
    try {
@@ -88,6 +90,11 @@ class MainActivity:ComponentActivity(){override fun onCreate(b:Bundle?){super.on
    }catch(cancelled:CancellationException){throw cancelled}
    catch(_:Exception){withContext(Dispatchers.Main.immediate){Toast.makeText(context,"试戴已生成，历史记录保存失败",Toast.LENGTH_LONG).show()}}
   }
+ }
+ if(screen=="kit-review" && customNailUri!=null){
+  NailKitReview(Uri.parse(customNailUri),onAccepted={directory->customKitDirectory=directory.absolutePath;screen="library";showSheet=true},
+   onBack={screen="library"},analyze=kitAnalyzer)
+  return
  }
  if(screen=="album-review" && albumHandUri!=null){
   AlbumHandReview(Uri.parse(albumHandUri),onAccepted={photo,_->source=photo;albumHandUri=null;screen="result"},

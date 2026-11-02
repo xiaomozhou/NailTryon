@@ -1,0 +1,150 @@
+{
+  "version": 1,
+  "source": "nail_lemon.png",
+  "sourceSha256": "6723e4f751e8bf31d14b244c9384c19b47644aaa8723f74c233493a29a5073da",
+  "width": 1200,
+  "height": 1200,
+  "selection": "unmarked-first-row",
+  "pieces": [
+    {
+      "finger": "THUMB",
+      "file": "THUMB.png",
+      "contextFile": "THUMB-context.jpg",
+      "sourceBox": [
+        832,
+        442,
+        1003,
+        627
+      ],
+      "contextBox": [
+        799,
+        409,
+        1036,
+        660
+      ],
+      "center": [
+        919.9639484744282,
+        535.3616341902734
+      ],
+      "axisRadians": 2.216828032372921,
+      "maskArea": 18321,
+      "confidence": 0.954217255115509,
+      "sourcePoint": [
+        926,
+        535
+      ]
+    },
+    {
+      "finger": "INDEX",
+      "file": "INDEX.png",
+      "contextFile": "INDEX-context.jpg",
+      "sourceBox": [
+        767,
+        401,
+        909,
+        556
+      ],
+      "contextBox": [
+        739,
+        373,
+        937,
+        584
+      ],
+      "center": [
+        838.5226412053823,
+        481.31830634114897
+      ],
+      "axisRadians": 2.2335530236129504,
+      "maskArea": 12411,
+      "confidence": 0.933253288269043,
+      "sourcePoint": [
+        845,
+        478
+      ]
+    },
+    {
+      "finger": "MIDDLE",
+      "file": "MIDDLE.png",
+      "contextFile": "MIDDLE-context.jpg",
+      "sourceBox": [
+        694,
+        354,
+        839,
+        511
+      ],
+      "contextBox": [
+        666,
+        326,
+        867,
+        539
+      ],
+      "center": [
+        767.3779874213836,
+        434.68506289308175
+      ],
+      "axisRadians": 2.2436749076395968,
+      "maskArea": 12720,
+      "confidence": 0.9255508780479431,
+      "sourcePoint": [
+        769,
+        434
+      ]
+    },
+    {
+      "finger": "RING",
+      "file": "RING.png",
+      "contextFile": "RING-context.jpg",
+      "sourceBox": [
+        628,
+        310,
+        771,
+        460
+      ],
+      "contextBox": [
+        601,
+        283,
+        798,
+        487
+      ],
+      "center": [
+        700.4748226336736,
+        387.01142066101403
+      ],
+      "axisRadians": 2.288853426883339,
+      "maskArea": 11558,
+      "confidence": 0.9021898508071899,
+      "sourcePoint": [
+        699,
+        393
+      ]
+    },
+    {
+      "finger": "LITTLE",
+      "file": "LITTLE.png",
+      "contextFile": "LITTLE-context.jpg",
+      "sourceBox": [
+        566,
+        281,
+        705,
+        410
+      ],
+      "contextBox": [
+        541,
+        256,
+        730,
+        435
+      ],
+      "center": [
+        631.182162907515,
+        342.2561311927509
+      ],
+      "axisRadians": 2.5088612145972298,
+      "maskArea": 10153,
+      "confidence": 0.9731270670890808,
+      "sourcePoint": [
+        641,
+        345
+      ]
+    }
+  ]
+}
