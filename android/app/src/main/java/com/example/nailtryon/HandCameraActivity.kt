@@ -47,8 +47,12 @@ class HandCameraActivity : ComponentActivity() {
         }
         setContent {
             MaterialTheme {
-                HandCameraScreen(output,
-                    onCaptured = { setResult(Activity.RESULT_OK); finish() },
+                var captured by rememberSaveable { mutableStateOf(false) }
+                if (captured) NailDetectionReview(output,
+                    onAccepted = { setResult(Activity.RESULT_OK); finish() },
+                    onRetake = { captured = false })
+                else HandCameraScreen(output,
+                    onCaptured = { captured = true },
                     onCancel = { setResult(Activity.RESULT_CANCELED); finish() })
             }
         }
