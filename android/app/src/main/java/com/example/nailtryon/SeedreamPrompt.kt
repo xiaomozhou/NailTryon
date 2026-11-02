@@ -1,11 +1,16 @@
 ﻿package com.example.nailtryon
 
-/** Prompt contract shared by the future cloud provider and local fallback. */
+/** Seedream multi-image editing contract. Never a local colour overlay. */
 object SeedreamPrompt {
     const val defaultModel = "doubao-seedream-5-0-pro-260628"
 
     fun forStyle(style: NailStyle): String =
-        "在保持手部姿态、肤色、背景、光线和构图不变的前提下，" +
+        "图1是唯一要编辑的左手手背原图。图2是已选定的一排五片美甲，从左到右依次对应拇指、食指、中指、无名指、小指。" +
+            "图3若提供，是图1的指甲定位引导，数字1到5分别对应上述五指；轮廓与数字只用于定位，不得出现在成片。" +
+            "严格按一对一对应转移五片美甲的颜色、纹理、图案、立体饰品，不能复制同一片到所有手指，不能贴到皮肤或指节。" +
+            "根据各指甲实际宽度、方向、透视和曲率调整美甲片，甲根沿原甲根自然衔接，甲面具有原光线下的高光和接触阴影。" +
+            "保留立体装饰的体积，不粘贴参考图的底板、文字或背景。仅输出一张完整手部试戴照片，不要拼图或对比图。" +
+            "在保持手部姿态、肤色、背景、光线和构图不变的前提下，" +
             "将参考图中的${style.name}（${style.category}）美甲自然贴合到手部照片的指甲上。" +
             "只修改指甲区域，不改变手指数量、手指形状和人物身份；保持甲面边缘清晰、" +
             "颜色与装饰细节准确，加入符合原照片光线的自然高光和轻微阴影，输出真实的美甲试戴效果。"

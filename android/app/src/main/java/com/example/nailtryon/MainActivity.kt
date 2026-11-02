@@ -70,25 +70,30 @@ class MainActivity:ComponentActivity(){override fun onCreate(b:Bundle?){super.on
  val cloudClient=remember{SeedreamTryOnClient("https://yviuahwjxdzgkuxjtwpd.supabase.co/functions/v1/seedream-tryon")}
  var albumHandUri by rememberSaveable{mutableStateOf<String?>(null)}
  val albumLauncher=rememberLauncherForActivityResult(ActivityResultContracts.GetContent()){uri:Uri?->if(uri!=null){showSheet=false;albumHandUri=uri.toString();screen="album-review"}}
- val capturePhoto=rememberCameraCapture{bitmap->showSheet=false;source=bitmap;screen="result"}
- LaunchedEffect(source,selected){
+ var generationError by remember{mutableStateOf<String?>(null)}
+ var generationAttempt by remember{mutableIntStateOf(0)}
+ val capturePhoto=rememberCameraCapture{bitmap->showSheet=false;result=null;source=bitmap;screen="result"}
+ LaunchedEffect(source,selected,screen,generationAttempt){
   if(screen=="result"&&source!=null&&selected!=null){
-   result=null
+   result=null;generationError=null
+   try {
    val hand=source!!
    val style=selected!!
    val nail=withContext(Dispatchers.IO){runCatching{
     if(style.id=="custom")customKitDirectory?.let{BitmapFactory.decodeFile(java.io.File(it,"reference.png").absolutePath)}
     else NailKitStore.catalogReference(context,style.drawableName)
    }.getOrNull()}
-   if(nail==null){Toast.makeText(context,"美甲预处理结果不可用，请重新选择",Toast.LENGTH_LONG).show();screen="library";return@LaunchedEffect}
-   val cloudResult=if(generateTryOn!=null)generateTryOn(hand,nail,style)else cloudClient.generate(hand,nail,style)
-   val completed=cloudResult ?: withContext(Dispatchers.Default){FusionEngine().compose(hand, styleColor(style))}
+   if(nail==null){withContext(Dispatchers.Main.immediate){Toast.makeText(context,"美甲预处理结果不可用，请重新选择",Toast.LENGTH_LONG).show()};screen="library";return@LaunchedEffect}
+   val cloudResult=if(generateTryOn!=null)generateTryOn(hand,nail,style)else SeedreamFusion.generate(context,hand,nail,style,cloudClient)
+   val completed=cloudResult ?: error("试戴生成失败，请检查网络后重试")
    result=completed
    try {
     history=withContext(Dispatchers.IO){historyStore.save(style,completed);historyStore.load()}
     historyLoaded=true
    }catch(cancelled:CancellationException){throw cancelled}
    catch(_:Exception){withContext(Dispatchers.Main.immediate){Toast.makeText(context,"试戴已生成，历史记录保存失败",Toast.LENGTH_LONG).show()}}
+   } catch(cancelled:CancellationException){throw cancelled}
+   catch(error:Exception){generationError=error.message?.takeIf{it.startsWith("请")||it.startsWith("试戴")}?:"试戴生成失败，请稍后重试";withContext(Dispatchers.Main.immediate){Toast.makeText(context,generationError,Toast.LENGTH_LONG).show()}}
   }
  }
  if(screen=="kit-review" && customNailUri!=null){
@@ -97,12 +102,12 @@ class MainActivity:ComponentActivity(){override fun onCreate(b:Bundle?){super.on
   return
  }
  if(screen=="album-review" && albumHandUri!=null){
-  AlbumHandReview(Uri.parse(albumHandUri),onAccepted={photo,_->source=photo;albumHandUri=null;screen="result"},
+  AlbumHandReview(Uri.parse(albumHandUri),onAccepted={photo,_->result=null;source=photo;albumHandUri=null;screen="result"},
    onCamera={capturePhoto()},onBack={albumHandUri=null;screen="library"},inspect=albumInspector)
   return
  }
  Scaffold(containerColor=Bg,bottomBar={NavigationBar(containerColor=Color.White){NavigationBarItem(selected=screen=="library",onClick={screen="library"},icon={Text("✦")},label={Text("美甲库")});NavigationBarItem(selected=screen=="history",onClick={screen="history"},icon={Text("◷")},label={Text("历史")})}}){pad->
-  Box(Modifier.padding(pad).fillMaxSize()){when(screen){"history"->TryOnHistoryScreen(history,historyStore,historyLoaded);"result"->selected?.let{style->ResultScreen(style,result,saving=gallerySave.saving,onSave={photo->gallerySave.save(photo){}},onBack={screen="library"})};else->LibraryScreen(category,{category=it},{selectedId=it.id;showSheet=true},onUploadNail={nailAlbumLauncher.launch("image/*")})}}
+  Box(Modifier.padding(pad).fillMaxSize()){when(screen){"history"->TryOnHistoryScreen(history,historyStore,historyLoaded);"result"->selected?.let{style->ResultScreen(style,result,generationError,onRetry={generationAttempt++},saving=gallerySave.saving,onSave={photo->gallerySave.save(photo){}},onBack={screen="library"})};else->LibraryScreen(category,{category=it},{selectedId=it.id;showSheet=true},onUploadNail={nailAlbumLauncher.launch("image/*")})}}
   if(showSheet)UploadSheet(onDismiss={showSheet=false},onAlbum={albumLauncher.launch("image/*")},onCamera={showSheet=false;capturePhoto()})
  }
 }
@@ -116,8 +121,6 @@ internal fun decodeUri(context: android.content.Context, uri: Uri): Bitmap? {
     return decoded ?: runCatching {context.contentResolver.openInputStream(uri)?.use{BitmapFactory.decodeStream(it)}}.getOrNull()
 }
 
-private fun styleColor(style:NailStyle): Int = when(style.category){"纯色美甲"->android.graphics.Color.rgb(190,45,70);"幻彩美甲"->android.graphics.Color.rgb(170,220,210);"手绘美甲"->android.graphics.Color.rgb(120,80,110);"主题美甲"->android.graphics.Color.rgb(220,150,180);else->android.graphics.Color.rgb(220,160,125)}
-
 @Composable private fun LibraryScreen(category:String,onCategory:(String)->Unit,onStyle:(NailStyle)->Unit,onUploadNail:()->Unit){
  Column(Modifier.fillMaxSize().padding(horizontal=16.dp)){Row(Modifier.horizontalScroll(rememberScrollState()).padding(top=18.dp,bottom=12.dp),horizontalArrangement=Arrangement.spacedBy(8.dp)){NailCatalog.categories.forEach{c->FilterChip(selected=c==category,onClick={onCategory(c)},label={Text(c.removeSuffix("美甲"))})}}
  Row(Modifier.fillMaxWidth().background(Soft,RoundedCornerShape(16.dp)).clickable{onUploadNail()},verticalAlignment=Alignment.CenterVertically){Text("＋",color=Coral,fontSize=22.sp,modifier=Modifier.padding(start=16.dp));Text("上传我的美甲图",color=Coral,fontSize=14.sp,modifier=Modifier.padding(12.dp));Spacer(Modifier.weight(1f));Text("›",color=Coral,fontSize=22.sp,modifier=Modifier.padding(end=16.dp))}
@@ -129,4 +132,4 @@ private fun styleColor(style:NailStyle): Int = when(style.category){"纯色美�
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable private fun UploadSheet(onDismiss:()->Unit,onAlbum:()->Unit,onCamera:()->Unit){ModalBottomSheet(onDismissRequest=onDismiss,containerColor=Color.White){Column(Modifier.padding(24.dp).fillMaxWidth()){Text("选择照片",fontSize=18.sp,color=Ink);ListItem(headlineContent={Text("拍照")},leadingContent={Text("◉",color=Coral)},modifier=Modifier.clickable{onCamera()});ListItem(headlineContent={Text("从相册选择")},leadingContent={Text("▧",color=Coral)},modifier=Modifier.clickable{onAlbum()});TextButton(onClick=onDismiss,modifier=Modifier.align(Alignment.CenterHorizontally)){Text("取消",color=Muted)}}}}
 
-@Composable private fun ResultScreen(style:NailStyle,result:Bitmap?,saving:Boolean,onSave:(Bitmap)->Unit,onBack:()->Unit){Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp)){Row(verticalAlignment=Alignment.CenterVertically){Text("‹",fontSize=32.sp,modifier=Modifier.clickable{onBack()});Text("试戴效果",fontSize=20.sp,color=Ink,modifier=Modifier.padding(start=16.dp))};Spacer(Modifier.height(18.dp));if(result==null){Box(Modifier.fillMaxWidth().aspectRatio(.75f).background(Soft,RoundedCornerShape(18.dp)),contentAlignment=Alignment.Center){CircularProgressIndicator(color=Coral);Text("正在生成试戴效果",color=Muted,modifier=Modifier.padding(top=82.dp))}}else TryOnPreview(result,"试戴结果",Modifier.testTag("result-image"));Text(style.name,fontSize=21.sp,color=Ink,modifier=Modifier.padding(top=18.dp));Text(style.category+" · 自然高光",fontSize=13.sp,color=Muted);Button(onClick={result?.let(onSave)},enabled=result!=null&&!saving,colors=ButtonDefaults.buttonColors(Coral),modifier=Modifier.fillMaxWidth().padding(top=24.dp)){Text(if(saving)"保存中…"else"保存")}}}
+@Composable private fun ResultScreen(style:NailStyle,result:Bitmap?,error:String?,onRetry:()->Unit,saving:Boolean,onSave:(Bitmap)->Unit,onBack:()->Unit){Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp)){Row(verticalAlignment=Alignment.CenterVertically){Text("‹",fontSize=32.sp,modifier=Modifier.clickable{onBack()});Text("试戴效果",fontSize=20.sp,color=Ink,modifier=Modifier.padding(start=16.dp))};Spacer(Modifier.height(18.dp));if(error!=null){Text(error,modifier=Modifier.testTag("generation-error"));Button(onClick=onRetry,modifier=Modifier.testTag("retry-generation")){Text("重新生成")}}else if(result==null){Box(Modifier.fillMaxWidth().aspectRatio(.75f).background(Soft,RoundedCornerShape(18.dp)),contentAlignment=Alignment.Center){CircularProgressIndicator(color=Coral);Text("正在生成试戴效果",color=Muted,modifier=Modifier.padding(top=82.dp))}}else TryOnPreview(result,"试戴结果",Modifier.testTag("result-image"));Text(style.name,fontSize=21.sp,color=Ink,modifier=Modifier.padding(top=18.dp));Text(style.category+" · 自然高光",fontSize=13.sp,color=Muted);Button(onClick={result?.let(onSave)},enabled=result!=null&&!saving,colors=ButtonDefaults.buttonColors(Coral),modifier=Modifier.fillMaxWidth().padding(top=24.dp)){Text(if(saving)"保存中…"else"保存")}}}

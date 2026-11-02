@@ -16,6 +16,7 @@ data class SeedreamTryOnRequest(
     val handImage: String,
     val nailImage: String,
     val prompt: String,
+    val guideImage: String? = null,
 )
 
 @Serializable
@@ -31,17 +32,18 @@ class SeedreamTryOnClient(
 ) {
     private val json = Json { ignoreUnknownKeys = true }
 
-    suspend fun generate(hand: Bitmap, nail: Bitmap, style: NailStyle): Bitmap? = withContext(Dispatchers.IO) {
+    suspend fun generate(hand: Bitmap, nail: Bitmap, style: NailStyle, guide: Bitmap? = null): Bitmap? = withContext(Dispatchers.IO) {
         if (endpoint.isBlank()) return@withContext null
         val request = SeedreamTryOnRequest(
             handImage = bitmapDataUrl(hand),
             nailImage = bitmapDataUrl(nail),
-            prompt = SeedreamPrompt.forStyle(style),
+            prompt = SeedreamPrompt.forStyle(style) + " 输出宽高比 ${hand.width}:${hand.height}，与图1完全相同的构图。",
+            guideImage = guide?.let(::bitmapDataUrl),
         )
         val connection = (URL(endpoint).openConnection() as HttpURLConnection).apply {
             requestMethod = "POST"
             connectTimeout = 15_000
-            readTimeout = 90_000
+            readTimeout = 145_000
             doOutput = true
             setRequestProperty("Content-Type", "application/json")
             demoToken?.takeIf { it.isNotBlank() }?.let { setRequestProperty("x-client-token", it) }
@@ -52,6 +54,8 @@ class SeedreamTryOnClient(
             val response = connection.inputStream.bufferedReader().use { it.readText() }
             val result = json.decodeFromString<SeedreamTryOnResponse>(response)
             result.imageDataUrl?.let(::decodeDataUrl) ?: result.imageUrl?.let(::download)
+        } catch (cancel: kotlinx.coroutines.CancellationException) {
+            throw cancel
         } catch (_: Exception) {
             null
         } finally {

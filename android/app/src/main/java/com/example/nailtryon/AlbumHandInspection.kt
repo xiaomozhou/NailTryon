@@ -79,7 +79,7 @@ internal object AlbumHandPolicy {
         val pose=poseProblems(hands,width,height)
         if(pose.isNotEmpty()) return AlbumHandCheck(pose)
         if(nails.width!=width || nails.height!=height || !nails.readyForAlignment) return AlbumHandCheck(listOf(HandPhotoProblem.NAILS_REQUIRED),nails)
-        val p=hands.single().points;val used=BooleanArray(5)
+        val p=hands.single().points;val used=BooleanArray(5);val ordered=mutableListOf<NailRegion>()
         // One mask per distal finger. Five masks elsewhere (e.g. a nail sample board) cannot pass.
         fun assign(finger:Int):Boolean {
             if(finger==5)return true
@@ -91,11 +91,11 @@ internal object AlbumHandPolicy {
                 val along=(x*dx+y*dy)/(length*length)
                 val across=abs(x*dy-y*dx)/length
                 if(!used[i] && along in -.3f..1.3f && across<=length*.6f) {
-                    used[i]=true;if(assign(finger+1))return true;used[i]=false
+                    used[i]=true;ordered.add(nail);if(assign(finger+1))return true;ordered.removeAt(ordered.lastIndex);used[i]=false
                 }
             }
             return false
         }
-        return if(assign(0)) AlbumHandCheck(emptyList(),nails) else AlbumHandCheck(listOf(HandPhotoProblem.NAILS_REQUIRED),nails)
+        return if(assign(0)) AlbumHandCheck(emptyList(),nails.copy(regions=ordered.toList())) else AlbumHandCheck(listOf(HandPhotoProblem.NAILS_REQUIRED),nails)
     }
 }
