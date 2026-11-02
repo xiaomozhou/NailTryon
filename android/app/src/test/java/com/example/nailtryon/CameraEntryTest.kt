@@ -33,11 +33,12 @@ class CameraEntryTest {
         val activity = compose.activity
         val permissions = activity.packageManager.getPackageInfo(activity.packageName, PackageManager.GET_PERMISSIONS)
             .requestedPermissions.orEmpty()
-        assertFalse("External camera must not require an ungranted CAMERA permission", permissions.contains(Manifest.permission.CAMERA))
+        assertTrue("Guided preview declares CAMERA permission", permissions.contains(Manifest.permission.CAMERA))
         compose.onAllNodesWithText("试戴")[0].performClick()
         compose.onNodeWithText("拍照").performClick()
         val request = shadowOf(activity).nextStartedActivityForResult
-        assertEquals(MediaStore.ACTION_IMAGE_CAPTURE, request.intent.action)
+        assertEquals(FullSizePicture.ACTION, request.intent.action)
+        assertEquals(HandCameraActivity::class.java.name, request.intent.component?.className)
         val uri = request.intent.getParcelableExtra<Uri>(MediaStore.EXTRA_OUTPUT)!!
         assertEquals("${activity.packageName}.camera", uri.authority)
         compose.runOnUiThread {

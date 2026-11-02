@@ -1,7 +1,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera.any" android:required="false" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />
-    <!-- The system camera owns CAMERA permission; this app only receives its output. -->
     <application android:theme="@style/Theme.NailTryOn" android:label="美甲试戴">
         <provider
             android:name=".CameraPhotoProvider"
@@ -16,5 +17,6 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <activity android:name=".HandCameraActivity" android:exported="false" />
     </application>
 </manifest>

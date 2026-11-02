@@ -2,6 +2,7 @@ package com.example.nailtryon
 
 import android.content.ClipData
 import android.content.Context
+import android.content.ComponentName
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -26,10 +27,13 @@ import kotlin.math.roundToInt
 
 class CameraPhotoProvider : FileProvider()
 
-/** Give the camera write access to exactly one app-owned JPEG, never a file:// URI. */
+/** Launch our guided camera with a private output JPEG; no overlay is written into the photo. */
 internal class FullSizePicture : ActivityResultContracts.TakePicture() {
+    companion object { const val ACTION = "com.example.nailtryon.action.GUIDED_HAND_CAPTURE" }
     override fun createIntent(context: Context, input: Uri): Intent =
         super.createIntent(context, input).apply {
+            action = ACTION
+            component = ComponentName(context, HandCameraActivity::class.java)
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
             clipData = ClipData.newRawUri("hand-photo", input)
         }

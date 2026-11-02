@@ -57,7 +57,7 @@ class CameraCaptureTest {
         showCapture()
         compose.onNodeWithText("拍照").performClick()
         val request = shadowOf(compose.activity).nextStartedActivityForResult
-        assertEquals(MediaStore.ACTION_IMAGE_CAPTURE, request.intent.action)
+        assertEquals(FullSizePicture.ACTION, request.intent.action)
         val uri = request.intent.getParcelableExtra<Uri>(MediaStore.EXTRA_OUTPUT)!!
         assertEquals("content", uri.scheme)
         assertEquals(uri, request.intent.clipData!!.getItemAt(0).uri)
@@ -86,7 +86,7 @@ class CameraCaptureTest {
         compose.waitUntil(10_000) { File(compose.activity.cacheDir, "camera").listFiles().orEmpty().isEmpty() }
         assertNull(received.get())
         compose.onNodeWithText("拍照").performClick()
-        assertEquals(MediaStore.ACTION_IMAGE_CAPTURE, shadowOf(compose.activity).nextStartedActivityForResult.intent.action)
+        assertEquals(FullSizePicture.ACTION, shadowOf(compose.activity).nextStartedActivityForResult.intent.action)
     }
 
     @Test fun emptyCameraOutputShowsFailureInsteadOfUploadingOrCrashing() {
