@@ -29,7 +29,7 @@ import org.robolectric.annotation.GraphicsMode
 import org.robolectric.shadows.ShadowToast
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [34])
+@Config(sdk = [34], application = ComposeHostTestApplication::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class HandCameraScreenTest {
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
