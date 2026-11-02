@@ -1,0 +1,22 @@
+MediaPipe Hands ONNX palm detection / hand landmark models
+
+Source: https://github.com/yakhyo/mediapipe-hand-landmark-onnx
+Source revision: 929c210b1d7362ceae83f2a301055bb139315e9e
+Model release: weights
+Copyright 2026 Yakhyokhuja Valikhujaev
+Licensed under Apache License 2.0 (LICENSE.hand-landmark.txt).
+
+Model topology and original weights originate from Google MediaPipe (Apache-2.0).
+Upstream exports recover weights through PINTO0309/PINTO_model_zoo conversions
+(Apache-2.0), with no quantization, then export the reconstructed PyTorch networks.
+https://github.com/google-ai-edge/mediapipe
+https://github.com/PINTO0309/PINTO_model_zoo/tree/main/033_Hand_Detection_and_Tracking
+
+The Kotlin inference adapter in HandLandmarkDetector.kt implements the SSD anchors,
+weighted NMS and rotated ROI configuration for these networks. It replaces the
+upstream Python/OpenCV runtime for this Android application. Original model files
+are unmodified; SHA-256 checksums are asserted by HandLandmarkModelTest.
+
+The test assets pointing to the upstream MediaPipe sample photographs are stored
+under src/test/resources/hand-pose: woman_hands.jpg, victory.jpg, thumb_up.jpg.
+The same Apache-2.0 license applies to those upstream test materials.

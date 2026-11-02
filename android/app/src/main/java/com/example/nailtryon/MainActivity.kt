@@ -43,7 +43,10 @@ private val Bg=Color(0xFFFBF9F7); private val Coral=Color(0xFFFF6168); private v
 
 class MainActivity:ComponentActivity(){override fun onCreate(b:Bundle?){super.onCreate(b);setContent{NailTryOnApp()}}}
 
-@Composable fun NailTryOnApp(generateTryOn: (suspend (Bitmap, Bitmap, NailStyle) -> Bitmap?)? = null){
+@Composable internal fun NailTryOnApp(
+ generateTryOn: (suspend (Bitmap, Bitmap, NailStyle) -> Bitmap?)? = null,
+ albumInspector: suspend (android.content.Context,Bitmap)->AlbumHandCheck = ::inspectAlbumHand,
+){
  var category by remember{mutableStateOf(NailCatalog.categories.first())}; var selectedId by rememberSaveable{mutableStateOf<String?>(null)}; var showSheet by remember{mutableStateOf(false)}; var screen by remember{mutableStateOf("library")}; var history by remember{mutableStateOf(listOf<TryOnHistoryEntry>())}; var source by remember{mutableStateOf<Bitmap?>(null)}; var result by remember{mutableStateOf<Bitmap?>(null)}
  val context=LocalContext.current
  val historyStore=remember(context){TryOnHistoryStore.forContext(context.applicationContext)}
@@ -66,7 +69,8 @@ class MainActivity:ComponentActivity(){override fun onCreate(b:Bundle?){super.on
   }
  }
  val cloudClient=remember{SeedreamTryOnClient("https://yviuahwjxdzgkuxjtwpd.supabase.co/functions/v1/seedream-tryon")}
- val albumLauncher=rememberLauncherForActivityResult(ActivityResultContracts.GetContent()){uri:Uri?->if(uri!=null){showSheet=false;source=decodeUri(context,uri);screen="result"}}
+ var albumHandUri by rememberSaveable{mutableStateOf<String?>(null)}
+ val albumLauncher=rememberLauncherForActivityResult(ActivityResultContracts.GetContent()){uri:Uri?->if(uri!=null){showSheet=false;albumHandUri=uri.toString();screen="album-review"}}
  val capturePhoto=rememberCameraCapture{bitmap->showSheet=false;source=bitmap;screen="result"}
  LaunchedEffect(source,selected){
   if(screen=="result"&&source!=null&&selected!=null){
@@ -84,6 +88,11 @@ class MainActivity:ComponentActivity(){override fun onCreate(b:Bundle?){super.on
    }catch(cancelled:CancellationException){throw cancelled}
    catch(_:Exception){withContext(Dispatchers.Main.immediate){Toast.makeText(context,"试戴已生成，历史记录保存失败",Toast.LENGTH_LONG).show()}}
   }
+ }
+ if(screen=="album-review" && albumHandUri!=null){
+  AlbumHandReview(Uri.parse(albumHandUri),onAccepted={photo,_->source=photo;albumHandUri=null;screen="result"},
+   onCamera={capturePhoto()},onBack={albumHandUri=null;screen="library"},inspect=albumInspector)
+  return
  }
  Scaffold(containerColor=Bg,bottomBar={NavigationBar(containerColor=Color.White){NavigationBarItem(selected=screen=="library",onClick={screen="library"},icon={Text("✦")},label={Text("美甲库")});NavigationBarItem(selected=screen=="history",onClick={screen="history"},icon={Text("◷")},label={Text("历史")})}}){pad->
   Box(Modifier.padding(pad).fillMaxSize()){when(screen){"history"->TryOnHistoryScreen(history,historyStore,historyLoaded);"result"->selected?.let{style->ResultScreen(style,result,saving=gallerySave.saving,onSave={photo->gallerySave.save(photo){}},onBack={screen="library"})};else->LibraryScreen(category,{category=it},{selectedId=it.id;showSheet=true},onUploadNail={nailAlbumLauncher.launch("image/*")})}}

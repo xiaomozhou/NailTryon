@@ -45,10 +45,9 @@ class GallerySaveScreenTest {
                 })
             }
         }
-        val source = File(compose.activity.cacheDir, "green-source.jpg")
+        val source = File(compose.activity.cacheDir, "hand-source.jpg")
         source.outputStream().use { output ->
-            Bitmap.createBitmap(80, 120, Bitmap.Config.ARGB_8888).apply { eraseColor(Color.GREEN) }
-                .compress(Bitmap.CompressFormat.JPEG, 90, output)
+            javaClass.getResourceAsStream("/nail-detection/hand-1.jpg")!!.use { it.copyTo(output) }
         }
         compose.onAllNodesWithText("试戴")[0].performClick()
         compose.onNodeWithText("从相册选择").performClick()
@@ -56,6 +55,11 @@ class GallerySaveScreenTest {
         compose.runOnUiThread {
             compose.activity.activityResultRegistry.dispatchResult(request.requestCode, Activity.RESULT_OK, Intent().setData(Uri.fromFile(source)))
         }
+        compose.waitUntil(10_000) {
+            shadowOf(Looper.getMainLooper()).idle()
+            compose.onAllNodesWithText("照片符合要求，已检测到五片指甲，请检查轮廓").fetchSemanticsNodes().isNotEmpty()
+        }
+        compose.onNodeWithTag("accept-album-hand").assertIsEnabled().performClick()
         compose.waitUntil(10_000) { shadowOf(Looper.getMainLooper()).idle(); generated.get() }
         compose.onNodeWithContentDescription("试戴结果").assertExists()
     }
@@ -72,7 +76,7 @@ class GallerySaveScreenTest {
         val saved = BitmapFactory.decodeFile(provider.rows.values.single().file.absolutePath)!!
         assertEquals(160, saved.width)
         assertEquals(240, saved.height)
-        assertTrue("Must save magenta generated result, not green hand source", Color.red(saved.getPixel(20, 20)) > 240 && Color.green(saved.getPixel(20, 20)) < 15)
+        assertTrue("Must save magenta generated result, not the original hand photo", Color.red(saved.getPixel(20, 20)) > 240 && Color.green(saved.getPixel(20, 20)) < 15)
     }
 
     @Test fun failureShowsToastAndRetryCanSucceed() {

@@ -1,5 +1,6 @@
 ﻿# Build and environment artifacts
 android/.gradle/
+android/.kotlin/
 android/.idea/
 android/local.properties
 android/**/build/
