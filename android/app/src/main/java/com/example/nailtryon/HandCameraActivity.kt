@@ -90,8 +90,8 @@ internal fun HandCameraScreen(
 
     Column(Modifier.fillMaxSize().background(Color(0xFF15191D)).systemBarsPadding().padding(horizontal = 20.dp)) {
         TextButton(onClick = onCancel, modifier = Modifier.padding(top = 4.dp)) { Text("返回", color = Color.White) }
-        Text("请拍左手手背", color = Color.White, fontSize = 23.sp, modifier = Modifier.padding(top = 4.dp))
-        Text("五指自然分开，不遮挡指甲", color = Color(0xFFD4D8DC), fontSize = 14.sp, modifier = Modifier.padding(top = 8.dp, bottom = 14.dp))
+        Text("拍摄手部照片", color = Color.White, fontSize = 23.sp, modifier = Modifier.padding(top = 4.dp))
+        Text("手自然摆放，让指甲清晰可见", color = Color(0xFFD4D8DC), fontSize = 14.sp, modifier = Modifier.padding(top = 8.dp, bottom = 14.dp))
         BoxWithConstraints(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
             val frameWidth = minOf(maxWidth, maxHeight * .75f)
             Box(Modifier.width(frameWidth).aspectRatio(.75f).clip(RoundedCornerShape(16.dp)).background(Color.Black).testTag("hand-camera-preview")) {
@@ -109,7 +109,7 @@ internal fun HandCameraScreen(
                         catch (_: Exception) { ready = false; cameraFailed = true }
                         onDispose { ready = false; backend = null; camera.close() }
                     }
-                    LeftHandGuideOverlay(Modifier.fillMaxSize().padding(8.dp))
+                    HandFramingGuide(Modifier.fillMaxSize().padding(8.dp))
                     if (!ready) Text(
                         if (cameraFailed) "无法打开相机，请返回从相册选择" else "正在打开相机…",
                         color = Color.White, modifier = Modifier.align(Alignment.Center).background(Color.Black.copy(alpha = .7f)).padding(12.dp),
@@ -122,8 +122,6 @@ internal fun HandCameraScreen(
                 }
             }
         }
-        Text("将左手手背放入轮廓内，指甲朝向镜头", color = Color(0xFFD4D8DC), fontSize = 13.sp,
-            modifier = Modifier.align(Alignment.CenterHorizontally).padding(top = 12.dp))
         Button(
             onClick = {
                 if (ready && !capturing) {

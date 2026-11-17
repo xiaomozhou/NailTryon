@@ -66,5 +66,32 @@ internal object NailKitStore {
             return directory
         }catch(error:Exception){directory.listFiles()?.forEach{it.delete()};directory.delete();throw error}
     }
+    fun loadPieces(context: Context, style: NailStyle, customDirectory: String?): Map<NailFinger, Bitmap> {
+        fun open(name: String): java.io.InputStream =
+            if (style.id == "custom") File(checkNotNull(customDirectory), name).inputStream()
+            else context.assets.open("nail-kits/${style.drawableName}/$name")
+
+        val manifest = open("manifest.json").bufferedReader().use { Json.parseToJsonElement(it.readText()).jsonObject }
+        val pieces = mutableMapOf<NailFinger, Bitmap>()
+        try {
+            for (piece in manifest.getValue("pieces").jsonArray) {
+                val fields = piece.jsonObject
+                val finger = NailFinger.valueOf(fields.getValue("finger").jsonPrimitive.content)
+                check(finger !in pieces)
+                val bitmap = open("${finger.name}.png").use { checkNotNull(BitmapFactory.decodeStream(it)) }
+                try {
+                    pieces[finger] = LocalNailTryOn.upright(bitmap, fields.getValue("axisRadians").jsonPrimitive.float)
+                } finally {
+                    if (pieces[finger] !== bitmap) bitmap.recycle()
+                }
+            }
+            check(pieces.size == NailFinger.entries.size)
+            return pieces
+        } catch (error: Exception) {
+            pieces.values.forEach { it.recycle() }
+            throw error
+        }
+    }
+
     fun catalogReference(context:Context,drawable:String):Bitmap = context.assets.open("nail-kits/$drawable/reference.png").use{BitmapFactory.decodeStream(it)?:error("Invalid prepared catalog reference")}
 }

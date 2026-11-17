@@ -35,53 +35,28 @@ class HandLandmarkModelTest {
             }
         } }
     }
-    @Test fun rotatedLeftHandPassesButMirroredRightHandIsRejected() {
-        val source=photo("/nail-detection/hand-1.jpg")
-        detector().use { detector ->
-            val rotated=Bitmap.createBitmap(source,0,0,source.width,source.height,Matrix().apply{setRotate(90f)},true)
-            val observed=detector.detect(rotated)
-            assertEquals(1,observed.size)
-            assertTrue("Rotation must not change handedness: $observed",AlbumHandPolicy.poseProblems(observed,rotated.width,rotated.height).isEmpty())
-            val right=Bitmap.createBitmap(source,0,0,source.width,source.height,Matrix().apply{setScale(-1f,1f)},true)
-            val mirrored=detector.detect(right)
-            assertEquals(1,mirrored.size)
-            assertTrue(AlbumHandPolicy.poseProblems(mirrored,right.width,right.height).contains(HandPhotoProblem.LEFT_REQUIRED))
-        }
-    }
-    @Test fun realModelsRejectNonOpenGesturesMultipleHandsAndBlankPhoto() {
-        detector().use { detector ->
-            for(name in listOf("victory","thumb_up","woman_hands")) {
-                val image=photo("/hand-pose/$name.jpg");val hands=detector.detect(image)
-                val issues=AlbumHandPolicy.poseProblems(hands,image.width,image.height)
-                println("$name count=${hands.size} issues=$issues")
-                assertFalse("Unsupported pose must not pass: $name",issues.isEmpty())
-            }
-            val blank=Bitmap.createBitmap(600,800,Bitmap.Config.ARGB_8888).apply{eraseColor(Color.GRAY)}
-            assertTrue(detector.detect(blank).isEmpty())
-        }
-    }
-    @Test fun singlePalmPhotosAreRejectedInsteadOfMistakenForHandBack() {
-        val image=photo("/hand-pose/woman_hands.jpg")
-        val crops=listOf(Bitmap.createBitmap(image,120,270,400,220),Bitmap.createBitmap(image,0,560,380,240))
-        var palmSideRecognized=false
-        detector().use { detector -> crops.forEachIndexed { index,crop ->
-            val hands=detector.detect(crop)
-            assertEquals("Single palm crop $index",1,hands.size)
-            val issues=AlbumHandPolicy.poseProblems(hands,crop.width,crop.height)
-            println("palm crop $index handedness=${hands.single().mirroredLeftProbability} issues=$issues")
-            assertFalse(issues.isEmpty())
-            if(issues.contains(HandPhotoProblem.BACK_REQUIRED))palmSideRecognized=true
-        } }
-        assertTrue("At least the left-palm crop must fail the dorsal-side check",palmSideRecognized)
-    }
-    @Test fun obscuredNailPhotoCannotPassEvenIfHandLandmarksAreFound() {
-        val image=photo("/nail-detection/hand-1.jpg").copy(Bitmap.Config.ARGB_8888,true)
-        Canvas(image).drawRect(520f,185f,595f,280f,Paint().apply{color=Color.BLUE})
+    @Test fun rotatedAndMirroredHandsPassWithRealNailMasks() {
+        val source = photo("/nail-detection/hand-1.jpg")
         detector().use { pose -> NailDetector(model("nail-seg.onnx")).use { segmenter ->
-            val hands=pose.detect(image);assertEquals(1,hands.size)
-            val result=AlbumHandPolicy.inspect(hands,image.width,image.height,segmenter.detect(image))
-            assertFalse(result.accepted)
-            assertTrue(result.problems.isNotEmpty())
+            for (transform in listOf(Matrix().apply { setRotate(90f) }, Matrix().apply { setScale(-1f, 1f) })) {
+                val image = Bitmap.createBitmap(source, 0, 0, source.width, source.height, transform, true)
+                val result = AlbumHandPolicy.inspect(pose.detect(image), image.width, image.height, segmenter.detect(image))
+                assertTrue(result.accepted)
+                assertEquals(NailFinger.entries, result.nails!!.regions.map { it.finger })
+            }
+        } }
+    }
+
+    @Test fun realModelsStillRejectBlankPhotoAndAcceptClearNailsWhenOneIsObscured() {
+        val image = photo("/nail-detection/hand-1.jpg").copy(Bitmap.Config.ARGB_8888, true)
+        Canvas(image).drawRect(520f, 185f, 595f, 280f, Paint().apply { color = Color.BLUE })
+        val blank = Bitmap.createBitmap(600, 800, Bitmap.Config.ARGB_8888).apply { eraseColor(Color.GRAY) }
+        detector().use { pose -> NailDetector(model("nail-seg.onnx")).use { segmenter ->
+            val obscured = AlbumHandPolicy.inspect(pose.detect(image), image.width, image.height, segmenter.detect(image))
+            assertTrue(obscured.accepted)
+            assertTrue(obscured.nails!!.regions.size in 1..4)
+            assertFalse(obscured.nails.regions.any { it.center.x in 520f..595f && it.center.y in 185f..280f })
+            assertFalse(AlbumHandPolicy.inspect(pose.detect(blank), blank.width, blank.height, segmenter.detect(blank)).accepted)
         } }
     }
 }

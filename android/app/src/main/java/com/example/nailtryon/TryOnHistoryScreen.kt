@@ -53,6 +53,7 @@ internal fun TryOnHistoryScreen(history: List<TryOnHistoryEntry>, store: TryOnHi
             }
             Column {
                 Text(entry.name, fontSize = 16.sp, color = Color(0xFF211F21), modifier = Modifier.padding(bottom = 10.dp).testTag("history-name-${entry.id}"))
+                if (entry.onDevice) Text("本机试戴预览", fontSize = 12.sp, color = Color(0xFF777174), modifier = Modifier.padding(bottom = 8.dp))
                 Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.BottomEnd) {
                     val image = bitmap
                     if (image != null) TryOnPreview(image, "历史试戴效果：${entry.name}", Modifier.testTag("history-image-${entry.id}"))

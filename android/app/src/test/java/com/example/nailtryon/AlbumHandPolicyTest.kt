@@ -25,59 +25,55 @@ internal object HandPolicyFixture {
 }
 
 class AlbumHandPolicyTest {
-    @Test fun correctLeftDorsalHandPassesOnlyAfterPoseThenFiveMatchedMasks() {
-        val order=mutableListOf<String>()
-        val result=AlbumHandPolicy.evaluate(1000,1000,{order.add("pose");listOf(HandPolicyFixture.left())},
-            {order.add("nails");HandPolicyFixture.nails()})
-        assertEquals(listOf("pose","nails"),order)
+    @Test fun matchesVisibleNailsToTheSameFingersOnEitherHand() {
+        val left = HandPolicyFixture.left()
+        val right = left.copy(points = left.points.map { it.copy(x = 1000 - it.x) }, mirroredLeftProbability = .99f)
+        for (hand in listOf(left, right)) {
+            val nails = HandPolicyFixture.nails(hand)
+            val partial = nails.copy(regions = listOf(nails.regions[4], nails.regions[1]))
+            val result = AlbumHandPolicy.inspect(listOf(hand), 1000, 1000, partial)
+            assertTrue(result.accepted)
+            assertEquals(listOf(NailFinger.INDEX, NailFinger.LITTLE), result.nails!!.regions.map { it.finger })
+        }
+    }
+
+    @Test fun closeAndCroppedFingersDoNotBlockClearNails() {
+        val left = HandPolicyFixture.left()
+        val points = left.points.toMutableList().apply {
+            this[7] = this[11].copy(x = this[11].x + 25)
+            this[8] = this[12].copy(x = this[12].x + 25)
+            this[4] = this[4].copy(x = 1020f)
+        }
+        val hand = left.copy(points = points)
+        val original = HandPolicyFixture.nails()
+        val nails = original.copy(regions = HandPolicyFixture.nails(hand.copy(
+            points = points.toMutableList().apply { this[4] = left.points[4] },
+        )).regions.drop(1))
+        val result = AlbumHandPolicy.inspect(listOf(hand), 1000, 1000, nails)
         assertTrue(result.accepted)
+        assertEquals(4, result.nails!!.regions.size)
+        assertEquals(listOf(NailFinger.INDEX, NailFinger.MIDDLE, NailFinger.RING, NailFinger.LITTLE),
+            result.nails.regions.map { it.finger })
     }
-    @Test fun noHandOrMultipleHandsStopBeforeNailInference() {
-        listOf(emptyList(),List(2){HandPolicyFixture.left()}).forEach { hands ->
-            var called=false
-            val result=AlbumHandPolicy.evaluate(1000,1000,{hands},{called=true;HandPolicyFixture.nails()})
-            assertFalse(called);assertFalse(result.accepted)
-            assertTrue(result.problems.isNotEmpty())
+
+    @Test fun clearMasksRemainUsableWithoutReliableLandmarks() {
+        val nails = HandPolicyFixture.nails()
+        for (hands in listOf(emptyList(), listOf(HandPolicyFixture.left().copy(presence = .4f)))) {
+            val result = AlbumHandPolicy.inspect(hands, 1000, 1000, nails)
+            assertTrue(result.accepted)
+            assertEquals(nails.regions.size, result.nails!!.regions.size)
+            assertTrue(result.nails.regions.all { it.finger == null })
         }
     }
-    @Test fun rightHandAndLeftPalmAreRejectedIndependently() {
-        val left=HandPolicyFixture.left()
-        val right=left.copy(points=left.points.map{it.copy(x=1000-it.x)},mirroredLeftProbability=.99f)
-        assertTrue(AlbumHandPolicy.poseProblems(listOf(right),1000,1000).contains(HandPhotoProblem.LEFT_REQUIRED))
-        val palm=left.copy(points=left.points.map{it.copy(x=1000-it.x)})
-        assertTrue(AlbumHandPolicy.poseProblems(listOf(palm),1000,1000).contains(HandPhotoProblem.BACK_REQUIRED))
-        assertFalse(AlbumHandPolicy.poseProblems(listOf(palm),1000,1000).contains(HandPhotoProblem.LEFT_REQUIRED))
-    }
-    @Test fun joinedBentAndCrossedFingersAreRejected() {
-        val left=HandPolicyFixture.left()
-        val variants=listOf(
-            left.points.toMutableList().apply{this[8]=this[12].copy(x=this[12].x+5)},
-            left.points.toMutableList().apply{this[8]=this[5].copy(y=this[5].y+60)},
-            left.points.toMutableList().apply{val a=this[8];this[8]=this[12];this[12]=a})
-        variants.forEach { points -> assertTrue(AlbumHandPolicy.poseProblems(listOf(left.copy(points=points)),1000,1000).contains(HandPhotoProblem.FINGERS_REQUIRED)) }
-    }
-    @Test fun uncertainNonFiniteAndClippedObservationsCannotPass() {
-        val left=HandPolicyFixture.left()
-        assertTrue(AlbumHandPolicy.poseProblems(listOf(left.copy(presence=.6f)),1000,1000).contains(HandPhotoProblem.NO_HAND))
-        assertTrue(AlbumHandPolicy.poseProblems(listOf(left.copy(mirroredLeftProbability=.5f)),1000,1000).contains(HandPhotoProblem.LEFT_REQUIRED))
-        assertTrue(AlbumHandPolicy.poseProblems(listOf(left.copy(points=left.points.map{it.copy(x=Float.NaN)})),1000,1000).contains(HandPhotoProblem.NO_HAND))
-        val clipped=left.points.toMutableList().apply{this[4]=this[4].copy(x=999f)}
-        assertTrue(AlbumHandPolicy.poseProblems(listOf(left.copy(points=clipped)),1000,1000).contains(HandPhotoProblem.CLIPPED))
-    }
-    @Test fun missingHiddenWeakDuplicateAndUnrelatedNailsCannotPass() {
-        val left=HandPolicyFixture.left();val nails=HandPolicyFixture.nails()
-        val unrelated=nails.regions.map{it.copy(center=NailPoint(500f,800f))}
-        listOf(nails.copy(regions=nails.regions.take(4)),nails.copy(regions=List(5){nails.regions[0]}),
-            nails.copy(regions=unrelated),nails.copy(regions=nails.regions.map{it.copy(confidence=.55f)}),
-            nails.copy(width=1200)).forEach { detection ->
-            val result=AlbumHandPolicy.inspect(listOf(left),1000,1000,detection)
-            assertFalse(result.accepted);assertTrue(result.problems.contains(HandPhotoProblem.NAILS_REQUIRED))
+
+    @Test fun rejectsEmptyWeakAndWrongDimensionResults() {
+        val nails = HandPolicyFixture.nails()
+        for (invalid in listOf(nails.copy(regions = emptyList()),
+                nails.copy(regions = nails.regions.map { it.copy(confidence = .55f) }),
+                nails.copy(width = 1200))) {
+            val result = AlbumHandPolicy.inspect(listOf(HandPolicyFixture.left()), 1000, 1000, invalid)
+            assertFalse(result.accepted)
+            assertEquals(listOf(HandPhotoProblem.NAILS_REQUIRED), result.problems)
         }
-    }
-    @Test fun geometryIsInvariantUnderRotationAndDoesNotInferHandFromScreenThumbPosition() {
-        val left=HandPolicyFixture.left()
-        val rotated=left.copy(points=left.points.map{it.copy(x=1000-it.y,y=it.x)})
-        assertTrue(AlbumHandPolicy.poseProblems(listOf(rotated),1000,1000).isEmpty())
-        assertTrue(AlbumHandPolicy.inspect(listOf(rotated),1000,1000,HandPolicyFixture.nails(rotated)).accepted)
     }
 }

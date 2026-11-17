@@ -41,37 +41,65 @@ export function createHandler(config: Config, transport: typeof fetch = fetch) {
       return json({error: "invalid_images"}, 400);
     if (typeof input.prompt !== "string" || !input.prompt.trim() || input.prompt.length > 6000)
       return json({error: "invalid_prompt"}, 400);
+    const requestId = crypto.randomUUID();
+    const started = Date.now();
+    const report = (event: string, extra: Record<string, unknown> = {}) => {
+      console.info(JSON.stringify({ service: "seedream-tryon", requestId, event, elapsedMs: Date.now() - started, ...extra }));
+    };
+    const fail = (error: string, status: number, extra: Record<string, unknown> = {}) => {
+      report(error, extra);
+      return json({ error, requestId, ...extra }, status);
+    };
+    report("generation_started", { inputBytes: input.handImage.length + input.nailImage.length +
+        (typeof input.guideImage === "string" ? input.guideImage.length : 0) });
     try {
       const upstream = await transport(ARK_URL, {
         method: "POST",
-        headers: {"Content-Type": "application/json", "Authorization": `Bearer ${config.apiKey}`},
-        signal: AbortSignal.timeout(130_000),
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${config.apiKey}` },
+        signal: AbortSignal.timeout(110_000),
         body: JSON.stringify({
           model: config.model,
           prompt: input.prompt,
           image: [input.handImage, input.nailImage, ...(input.guideImage ? [input.guideImage] : [])],
-          size: "2K", response_format: "b64_json", watermark: false,
+          size: "1.5K",
+          output_format: "jpeg",
+          response_format: "b64_json",
+          watermark: false,
         }),
       });
+      const providerRequestId = safeIdentifier(upstream.headers.get("x-request-id") ?? upstream.headers.get("x-tt-logid"));
+      report("provider_response", { providerStatus: upstream.status, providerRequestId });
       const payload = await upstream.json().catch(() => null);
-      // Never forward the raw provider payload, which may contain private data.
-      if (!upstream.ok) {
-        const code = payload?.error?.code;
-        // Diagnostic for integration errors only; strip all supplied private material before returning.
-        let message = typeof payload?.error?.message === "string" ? payload.error.message : "";
-        for (const secret of [config.apiKey, input.handImage, input.nailImage, input.guideImage, input.prompt])
-          if (typeof secret === "string" && secret) message = message.replaceAll(secret, "[redacted]");
-        message = message.replace(/data:image\/[^\s]+/g,"[image]").slice(0,300);
-        return json({error: "seedream_request_failed", providerStatus: upstream.status, providerMessage: message,
-          providerCode: typeof code === "string" && /^[A-Za-z0-9_.-]{1,100}$/.test(code) ? code : "unknown"}, upstream.status === 429 ? 429 : 502);
-      }
       const output = payload?.data?.[0];
-      if (typeof output?.b64_json !== "string" || !output.b64_json ||
-          !/^[A-Za-z0-9+/]+={0,2}$/.test(output.b64_json))
-        return json({error: "seedream_empty_result"}, 502);
-      return json({model: payload.model ?? config.model, imageDataUrl: `data:image/jpeg;base64,${output.b64_json}`});
-    } catch(error) {
-      return json({error: error instanceof Error && /Timeout|Abort/.test(error.name) ? "seedream_timeout" : "seedream_unavailable"}, 504);
+      const providerError = payload?.error ?? output?.error;
+      if (!upstream.ok || providerError) {
+        const providerCode = safeIdentifier(providerError?.code) ?? "unknown";
+        const status = upstream.status;
+        const error = /sensitive|safety|moderation/i.test(providerCode) ? "seedream_content_rejected"
+          : status === 401 || status === 403 ? "seedream_authorization_failed"
+          : status === 429 ? "seedream_rate_limited"
+          : status === 400 ? "seedream_invalid_input"
+          : "seedream_request_failed";
+        return fail(error, status === 429 ? 429 : 502, { providerStatus: status, providerCode, providerRequestId });
+      }
+
+      const image = output?.b64_json;
+      const mime = typeof image === "string" && image.startsWith("/9j/") ? "jpeg"
+        : typeof image === "string" && image.startsWith("iVBORw0KGgo") ? "png" : null;
+      if (!mime) return fail("seedream_empty_result", 502, { providerRequestId });
+      report("generation_complete", { outputBytes: image.length, providerRequestId });
+      return json({
+        model: payload.model ?? config.model,
+        imageDataUrl: `data:image/${mime};base64,${image}`,
+        requestId,
+      });
+    } catch (error) {
+      const timeout = error instanceof Error && /Timeout|Abort/.test(error.name);
+      return fail(timeout ? "seedream_timeout" : "seedream_unavailable", timeout ? 504 : 502);
     }
   };
+}
+
+function safeIdentifier(value: unknown): string | undefined {
+  return typeof value === "string" && /^[A-Za-z0-9_.-]{1,128}$/.test(value) ? value : undefined;
 }

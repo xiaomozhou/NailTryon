@@ -1,4 +1,4 @@
-﻿package com.example.nailtryon
+package com.example.nailtryon
 
 import android.os.Bundle
 import android.graphics.Bitmap
@@ -46,9 +46,10 @@ class MainActivity:ComponentActivity(){override fun onCreate(b:Bundle?){super.on
 @Composable internal fun NailTryOnApp(
  generateTryOn: (suspend (Bitmap, Bitmap, NailStyle) -> Bitmap?)? = null,
  albumInspector: suspend (android.content.Context,Bitmap)->AlbumHandCheck = ::inspectAlbumHand,
+ cloudClientOverride: SeedreamTryOnClient? = null,
  kitAnalyzer: suspend (android.content.Context,Bitmap)->NailKitAnalysis = ::analyzeNailKit,
 ){
- var category by remember{mutableStateOf(NailCatalog.categories.first())}; var selectedId by rememberSaveable{mutableStateOf<String?>(null)}; var showSheet by remember{mutableStateOf(false)}; var screen by remember{mutableStateOf("library")}; var history by remember{mutableStateOf(listOf<TryOnHistoryEntry>())}; var source by remember{mutableStateOf<Bitmap?>(null)}; var result by remember{mutableStateOf<Bitmap?>(null)}
+ var category by remember{mutableStateOf(NailCatalog.categories.first())}; var selectedId by rememberSaveable{mutableStateOf<String?>(null)}; var showSheet by remember{mutableStateOf(false)}; var screen by remember{mutableStateOf("library")}; var history by remember{mutableStateOf(listOf<TryOnHistoryEntry>())}; var source by remember{mutableStateOf<Bitmap?>(null)}; var result by remember{mutableStateOf<GeneratedTryOn?>(null)}
  val context=LocalContext.current
  val historyStore=remember(context){TryOnHistoryStore.forContext(context.applicationContext)}
  var historyLoaded by remember{mutableStateOf(false)}
@@ -67,13 +68,19 @@ class MainActivity:ComponentActivity(){override fun onCreate(b:Bundle?){super.on
    customNailUri=uri.toString();customKitDirectory=null;selectedId="custom";showSheet=false;screen="kit-review"
   }
  }
- val cloudClient=remember{SeedreamTryOnClient("https://yviuahwjxdzgkuxjtwpd.supabase.co/functions/v1/seedream-tryon")}
+ val cloudClient = remember(cloudClientOverride) {
+  cloudClientOverride ?: SeedreamTryOnClient(
+   endpoint = "https://br-bonny-anoa-678c6d38.supabase.aidap-global.cn-beijing.volces.com/functions/v1/seedream-tryon",
+   anonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1wbGF0Zm9ybSIsInJvbGUiOiJhbm9uIiwiZXhwIjozNjkyMDcwNzM5fQ.Do_vXMyaGebYAZAudL7Jn-HiyneTM_1ksRSUrsrDk_0",
+  )
+ }
  var albumHandUri by rememberSaveable{mutableStateOf<String?>(null)}
  val albumLauncher=rememberLauncherForActivityResult(ActivityResultContracts.GetContent()){uri:Uri?->if(uri!=null){showSheet=false;albumHandUri=uri.toString();screen="album-review"}}
  var generationError by remember{mutableStateOf<String?>(null)}
  var generationAttempt by remember{mutableIntStateOf(0)}
- val capturePhoto=rememberCameraCapture{bitmap->showSheet=false;result=null;source=bitmap;screen="result"}
- LaunchedEffect(source,selected,screen,generationAttempt){
+ var tryOnMode by remember{mutableStateOf(TryOnMode.AUTOMATIC)}
+ val capturePhoto=rememberCameraCapture{bitmap->showSheet=false;result=null;tryOnMode=TryOnMode.AUTOMATIC;source=bitmap;screen="result"}
+ LaunchedEffect(source,selected,screen,generationAttempt,tryOnMode){
   if(screen=="result"&&source!=null&&selected!=null){
    result=null;generationError=null
    try {
@@ -84,11 +91,18 @@ class MainActivity:ComponentActivity(){override fun onCreate(b:Bundle?){super.on
     else NailKitStore.catalogReference(context,style.drawableName)
    }.getOrNull()}
    if(nail==null){withContext(Dispatchers.Main.immediate){Toast.makeText(context,"美甲预处理结果不可用，请重新选择",Toast.LENGTH_LONG).show()};screen="library";return@LaunchedEffect}
-   val cloudResult=if(generateTryOn!=null)generateTryOn(hand,nail,style)else SeedreamFusion.generate(context,hand,nail,style,cloudClient)
-   val completed=cloudResult ?: error("试戴生成失败，请检查网络后重试")
+   val completed = if (generateTryOn != null) {
+    GeneratedTryOn(generateTryOn(hand, nail, style) ?: error("试戴生成失败，请稍后重试"))
+   } else {
+    try {
+     SeedreamFusion.generate(context, hand, nail, style, cloudClient, customKitDirectory, tryOnMode)
+    } finally {
+     nail.recycle()
+    }
+   }
    result=completed
    try {
-    history=withContext(Dispatchers.IO){historyStore.save(style,completed);historyStore.load()}
+    history=withContext(Dispatchers.IO){historyStore.save(style,completed.bitmap,completed.onDevice);historyStore.load()}
     historyLoaded=true
    }catch(cancelled:CancellationException){throw cancelled}
    catch(_:Exception){withContext(Dispatchers.Main.immediate){Toast.makeText(context,"试戴已生成，历史记录保存失败",Toast.LENGTH_LONG).show()}}
@@ -102,12 +116,15 @@ class MainActivity:ComponentActivity(){override fun onCreate(b:Bundle?){super.on
   return
  }
  if(screen=="album-review" && albumHandUri!=null){
-  AlbumHandReview(Uri.parse(albumHandUri),onAccepted={photo,_->result=null;source=photo;albumHandUri=null;screen="result"},
+  AlbumHandReview(Uri.parse(albumHandUri),onAccepted={photo,_->result=null;tryOnMode=TryOnMode.AUTOMATIC;source=photo;albumHandUri=null;screen="result"},
    onCamera={capturePhoto()},onBack={albumHandUri=null;screen="library"},inspect=albumInspector)
   return
  }
  Scaffold(containerColor=Bg,bottomBar={NavigationBar(containerColor=Color.White){NavigationBarItem(selected=screen=="library",onClick={screen="library"},icon={Text("✦")},label={Text("美甲库")});NavigationBarItem(selected=screen=="history",onClick={screen="history"},icon={Text("◷")},label={Text("历史")})}}){pad->
-  Box(Modifier.padding(pad).fillMaxSize()){when(screen){"history"->TryOnHistoryScreen(history,historyStore,historyLoaded);"result"->selected?.let{style->ResultScreen(style,result,generationError,onRetry={generationAttempt++},saving=gallerySave.saving,onSave={photo->gallerySave.save(photo){}},onBack={screen="library"})};else->LibraryScreen(category,{category=it},{selectedId=it.id;showSheet=true},onUploadNail={nailAlbumLauncher.launch("image/*")})}}
+  Box(Modifier.padding(pad).fillMaxSize()){when(screen){"history"->TryOnHistoryScreen(history,historyStore,historyLoaded);"result"->selected?.let{style->ResultScreen(style,result,generationError,onRetry={generationAttempt++},onLocal=if(tryOnMode==TryOnMode.LOCAL || generateTryOn!=null)null else { { tryOnMode=TryOnMode.LOCAL } },onCloud={
+   tryOnMode=TryOnMode.CLOUD
+   generationAttempt++
+  },saving=gallerySave.saving,onSave={photo->gallerySave.save(photo){}},onBack={screen="library"})};else->LibraryScreen(category,{category=it},{selectedId=it.id;showSheet=true},onUploadNail={nailAlbumLauncher.launch("image/*")})}}
   if(showSheet)UploadSheet(onDismiss={showSheet=false},onAlbum={albumLauncher.launch("image/*")},onCamera={showSheet=false;capturePhoto()})
  }
 }
@@ -132,4 +149,58 @@ internal fun decodeUri(context: android.content.Context, uri: Uri): Bitmap? {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable private fun UploadSheet(onDismiss:()->Unit,onAlbum:()->Unit,onCamera:()->Unit){ModalBottomSheet(onDismissRequest=onDismiss,containerColor=Color.White){Column(Modifier.padding(24.dp).fillMaxWidth()){Text("选择照片",fontSize=18.sp,color=Ink);ListItem(headlineContent={Text("拍照")},leadingContent={Text("◉",color=Coral)},modifier=Modifier.clickable{onCamera()});ListItem(headlineContent={Text("从相册选择")},leadingContent={Text("▧",color=Coral)},modifier=Modifier.clickable{onAlbum()});TextButton(onClick=onDismiss,modifier=Modifier.align(Alignment.CenterHorizontally)){Text("取消",color=Muted)}}}}
 
-@Composable private fun ResultScreen(style:NailStyle,result:Bitmap?,error:String?,onRetry:()->Unit,saving:Boolean,onSave:(Bitmap)->Unit,onBack:()->Unit){Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp)){Row(verticalAlignment=Alignment.CenterVertically){Text("‹",fontSize=32.sp,modifier=Modifier.clickable{onBack()});Text("试戴效果",fontSize=20.sp,color=Ink,modifier=Modifier.padding(start=16.dp))};Spacer(Modifier.height(18.dp));if(error!=null){Text(error,modifier=Modifier.testTag("generation-error"));Button(onClick=onRetry,modifier=Modifier.testTag("retry-generation")){Text("重新生成")}}else if(result==null){Box(Modifier.fillMaxWidth().aspectRatio(.75f).background(Soft,RoundedCornerShape(18.dp)),contentAlignment=Alignment.Center){CircularProgressIndicator(color=Coral);Text("正在生成试戴效果",color=Muted,modifier=Modifier.padding(top=82.dp))}}else TryOnPreview(result,"试戴结果",Modifier.testTag("result-image"));Text(style.name,fontSize=21.sp,color=Ink,modifier=Modifier.padding(top=18.dp));Text(style.category+" · 自然高光",fontSize=13.sp,color=Muted);Button(onClick={result?.let(onSave)},enabled=result!=null&&!saving,colors=ButtonDefaults.buttonColors(Coral),modifier=Modifier.fillMaxWidth().padding(top=24.dp)){Text(if(saving)"保存中…"else"保存")}}}
+@Composable
+private fun ResultScreen(
+    style: NailStyle,
+    result: GeneratedTryOn?,
+    error: String?,
+    onRetry: () -> Unit,
+    onLocal: (() -> Unit)?,
+    onCloud: () -> Unit,
+    saving: Boolean,
+    onSave: (Bitmap) -> Unit,
+    onBack: () -> Unit,
+) {
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("‹", fontSize = 32.sp, modifier = Modifier.clickable { onBack() })
+            Text("试戴效果", fontSize = 20.sp, color = Ink, modifier = Modifier.padding(start = 16.dp))
+        }
+        Spacer(Modifier.height(18.dp))
+        when {
+            error != null -> {
+                Text(error, modifier = Modifier.testTag("generation-error"))
+                Button(onClick = onRetry, modifier = Modifier.testTag("retry-generation")) { Text("重新生成") }
+                if (onLocal != null) TextButton(onClick = onLocal) { Text("使用本机预览") }
+            }
+            result == null -> {
+                Box(Modifier.fillMaxWidth().aspectRatio(.75f).background(Soft, RoundedCornerShape(18.dp)),
+                    contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = Coral)
+                    Text("正在生成试戴效果", color = Muted, modifier = Modifier.padding(top = 82.dp))
+                }
+                if (onLocal != null) {
+                    TextButton(onClick = onLocal, modifier = Modifier.align(Alignment.CenterHorizontally)) {
+                        Text("先看本机预览")
+                    }
+                }
+            }
+            else -> {
+                Text(if (result.onDevice) "本机试戴预览" else "云端 AI 生成",
+                    color = Muted, modifier = Modifier.padding(bottom = 8.dp))
+                if (result.onDevice) TextButton(onClick = onCloud, enabled = !saving) {
+                    Text("使用云端 AI 生成")
+                }
+                TryOnPreview(result.bitmap, "试戴结果", Modifier.testTag("result-image"))
+            }
+        }
+        Text(style.name, fontSize = 21.sp, color = Ink, modifier = Modifier.padding(top = 18.dp))
+        Text(style.category, fontSize = 13.sp, color = Muted)
+        Button(
+            onClick = { result?.bitmap?.let(onSave) },
+            enabled = result != null && !saving,
+            colors = ButtonDefaults.buttonColors(Coral),
+            modifier = Modifier.fillMaxWidth().padding(top = 24.dp),
+        ) { Text(if (saving) "保存中…" else "保存") }
+    }
+}

@@ -6,15 +6,43 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlin.math.abs
 
-/** Five masks are in anatomical thumb -> little order, established using the 21 hand landmarks. */
+/** Guides Seedream with clear nail masks and any available anatomical finger labels. */
+internal data class GeneratedTryOn(val bitmap: Bitmap, val onDevice: Boolean = false)
+
+internal enum class TryOnMode { AUTOMATIC, LOCAL, CLOUD }
+
 internal object SeedreamFusion {
-    suspend fun generate(context:Context,hand:Bitmap,kit:Bitmap,style:NailStyle,client:SeedreamTryOnClient):Bitmap {
+    suspend fun generate(
+        context: Context,
+        hand: Bitmap,
+        kit: Bitmap,
+        style: NailStyle,
+        client: SeedreamTryOnClient,
+        customDirectory: String? = null,
+        mode: TryOnMode = TryOnMode.AUTOMATIC,
+    ): GeneratedTryOn {
         val check=inspectAlbumHand(context,hand)
-        require(check.accepted){"请重新拍摄清晰的左手手背，张开五指并露出全部指甲"}
-        val guide=withContext(Dispatchers.Default){guide(hand,check.nails!!)}
+        require(check.accepted){"请换一张指甲清晰可见的手部照片"}
+        val nails = checkNotNull(check.nails)
+        suspend fun localPreview() = withContext(Dispatchers.Default) {
+            GeneratedTryOn(LocalNailTryOn.render(hand, nails, style) {
+                NailKitStore.loadPieces(context, style, customDirectory)
+            }, onDevice = true)
+        }
+        if (mode == TryOnMode.LOCAL) return localPreview()
+        val guide = withContext(Dispatchers.Default) { guide(hand, nails) }
         try {
-            val generated=client.generate(hand,kit,style,guide) ?: error("试戴生成失败，请检查网络或稍后重试")
-            return withContext(Dispatchers.Default){normalizeResult(hand,generated)}
+            val generated = client.generate(hand, kit, style, guide)
+            try {
+                return GeneratedTryOn(withContext(Dispatchers.Default) { normalizeResult(hand, generated) })
+            } catch (error: IllegalArgumentException) {
+                generated.recycle()
+                throw TryOnCloudException("试戴云服务返回的图片构图不匹配", error)
+            }
+        } catch (error: TryOnCloudException) {
+            android.util.Log.w("NailTryOn", error.message.orEmpty())
+            if (mode == TryOnMode.CLOUD) throw error
+            return localPreview()
         } finally {guide.recycle()}
     }
 
@@ -23,13 +51,26 @@ internal object SeedreamFusion {
         return hand.copy(Bitmap.Config.ARGB_8888,true).also { image ->
             val canvas=Canvas(image)
             val size=(minOf(hand.width,hand.height)*.025f).coerceAtLeast(12f)
-            val paint=Paint(Paint.ANTI_ALIAS_FLAG).apply{color=Color.CYAN;strokeWidth=size*.12f;style=Paint.Style.STROKE}
-            nails.regions.forEachIndexed { index,nail ->
-                val path=Path();nail.contour.forEachIndexed{i,p->if(i==0)path.moveTo(p.x,p.y)else path.lineTo(p.x,p.y)};path.close();canvas.drawPath(path,paint)
-                paint.style=Paint.Style.FILL;paint.textSize=size;paint.color=Color.BLACK
-                val label="${index+1}";val x=nail.box.left.toFloat();val y=(nail.box.top-size*.3f).coerceAtLeast(size)
-                canvas.drawRect(x,y-size,x+size,y+size*.15f,paint)
-                paint.color=Color.CYAN;canvas.drawText(label,x+size*.15f,y,paint);paint.style=Paint.Style.STROKE
+            val outline = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.CYAN
+                strokeWidth = size * .12f
+                style = Paint.Style.STROKE
+            }
+            val labelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { textSize = size }
+            nails.usableRegions.forEach { nail ->
+                val path = Path()
+                nail.contour.forEachIndexed { index, point ->
+                    if (index == 0) path.moveTo(point.x, point.y) else path.lineTo(point.x, point.y)
+                }
+                path.close()
+                canvas.drawPath(path, outline)
+                val label = nail.finger?.let { (it.ordinal + 1).toString() } ?: return@forEach
+                val x = nail.box.left.toFloat()
+                val y = (nail.box.top - size * .3f).coerceAtLeast(size)
+                labelPaint.color = Color.BLACK
+                canvas.drawRect(x, y - size, x + size, y + size * .15f, labelPaint)
+                labelPaint.color = Color.CYAN
+                canvas.drawText(label, x + size * .15f, y, labelPaint)
             }
         }
     }

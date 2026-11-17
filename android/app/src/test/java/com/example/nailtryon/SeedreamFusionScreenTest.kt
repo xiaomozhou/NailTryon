@@ -37,6 +37,41 @@ class SeedreamFusionScreenTest {
         compose.waitUntil(15000){compose.onNodeWithTag("accept-album-hand").fetchSemanticsNode().config.contains(androidx.compose.ui.semantics.SemanticsProperties.Disabled).not()}
         compose.onNodeWithTag("accept-album-hand").performClick()
     }
+    @Test fun unavailableCloudShowsLocalImageThatCanBeSavedAndMarkedInHistory() {
+        val gallery = TestGalleryProvider.install(compose.activity.applicationContext)
+        val port = java.net.ServerSocket(0).use { it.localPort }
+        val store = TryOnHistoryStore.forContext(compose.activity)
+        val baseline = store.load().map { it.id }.toSet()
+        compose.runOnUiThread {
+            compose.activity.setContent {
+                NailTryOnApp(cloudClientOverride = SeedreamTryOnClient("http://127.0.0.1:$port/try-on"))
+            }
+        }
+
+        selectHand()
+        waitTag("result-image")
+        compose.onNodeWithText("本机试戴预览").assertExists()
+        compose.onNodeWithTag("generation-error").assertDoesNotExist()
+        compose.onNodeWithText("保存").performScrollTo().assertIsEnabled().performClick()
+        compose.waitUntil(10000) {
+            shadowOf(Looper.getMainLooper()).idle()
+            org.robolectric.shadows.ShadowToast.getTextOfLatestToast() == "已保存到相册"
+        }
+        val file = gallery.rows.values.single().file
+        val saved = android.graphics.BitmapFactory.decodeFile(file.absolutePath)!!
+        val nailPixel = saved.getPixel(450, 148)
+        assertTrue(Color.red(nailPixel) > Color.green(nailPixel) + 35)
+        compose.waitUntil(10000) { store.load().any { it.id !in baseline && it.onDevice } }
+        compose.onNodeWithText("使用云端 AI 生成").performScrollTo().performClick()
+        waitTag("generation-error")
+        compose.onNodeWithText("试戴云服务连接失败，请切换手机网络后重试").assertExists()
+        compose.onNodeWithTag("result-image").assertDoesNotExist()
+        compose.onNodeWithText("使用本机预览").assertExists()
+        assertEquals(1, store.load().count { it.id !in baseline })
+        compose.onNodeWithText("历史").performClick()
+        compose.waitUntil(10000) { compose.onAllNodesWithText("本机试戴预览").fetchSemanticsNodes().isNotEmpty() }
+    }
+
     @Test fun failedCloudDoesNotFakeSuccessOrSaveHistoryAndExplicitRetryCanSucceed() {
         val calls=AtomicInteger()
         val store=TryOnHistoryStore.forContext(compose.activity)

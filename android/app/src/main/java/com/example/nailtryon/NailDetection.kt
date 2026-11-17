@@ -30,10 +30,13 @@ internal data class NailRegion(
     val axisRadians: Float,
     val orientedCorners: List<NailPoint>,
     val touchesImageEdge: Boolean,
+    val finger: NailFinger? = null,
+    val tipDirection: NailPoint? = null,
 )
 
 internal data class NailDetection(val width: Int, val height: Int, val regions: List<NailRegion>) {
-    val readyForAlignment get() = regions.size == 5 && regions.all { it.confidence >= .6f && !it.touchesImageEdge }
+    val usableRegions get() = regions.filter { it.confidence >= .6f && !it.touchesImageEdge }
+    val readyForAlignment get() = usableRegions.isNotEmpty()
 }
 
 /** On-device instance segmentation. No fixed-position/ellipse fallback, no polish compositing. */

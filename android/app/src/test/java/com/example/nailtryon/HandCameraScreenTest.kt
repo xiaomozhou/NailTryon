@@ -52,10 +52,10 @@ class HandCameraScreenTest {
     }
     @Test fun guidanceAndSeparateHandOverlayAppearAboveLivePreviewAndWaitForCamera() {
         show()
-        compose.onNodeWithText("请拍左手手背").assertExists()
-        compose.onNodeWithText("五指自然分开，不遮挡指甲").assertExists()
+        compose.onNodeWithText("拍摄手部照片").assertExists()
+        compose.onNodeWithText("手自然摆放，让指甲清晰可见").assertExists()
         compose.onNodeWithTag("live-camera-preview").assertExists()
-        compose.onNodeWithContentDescription("左手手背对齐轮廓，五根手指分开，拇指位于右侧").assertExists()
+        compose.onNodeWithContentDescription("手部取景参考框").assertExists()
         compose.onNodeWithText("拍照").assertIsNotEnabled()
         compose.runOnIdle { camera.ready(true) }
         compose.onNodeWithText("拍照").assertIsEnabled()
@@ -108,7 +108,7 @@ class HandCameraScreenTest {
                 Intent().putExtra(ActivityResultContracts.RequestMultiplePermissions.EXTRA_PERMISSIONS, arrayOf(Manifest.permission.CAMERA))
                     .putExtra(ActivityResultContracts.RequestMultiplePermissions.EXTRA_PERMISSION_GRANT_RESULTS, intArrayOf(PackageManager.PERMISSION_GRANTED)))
         }
-        compose.onNodeWithTag("left-hand-guide").assertExists()
+        compose.onNodeWithTag("hand-framing-guide").assertExists()
         compose.runOnIdle { camera.ready(true) }
         compose.onNodeWithText("拍照").assertIsEnabled()
         assertEquals(1, created)

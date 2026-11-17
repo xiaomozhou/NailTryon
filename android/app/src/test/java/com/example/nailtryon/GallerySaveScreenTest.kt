@@ -57,7 +57,7 @@ class GallerySaveScreenTest {
         }
         compose.waitUntil(10_000) {
             shadowOf(Looper.getMainLooper()).idle()
-            compose.onAllNodesWithText("照片符合要求，已检测到五片指甲，请检查轮廓").fetchSemanticsNodes().isNotEmpty()
+            compose.onAllNodesWithText("已检测到5片清晰指甲，可继续试戴").fetchSemanticsNodes().isNotEmpty()
         }
         compose.onNodeWithTag("accept-album-hand").assertIsEnabled().performClick()
         compose.waitUntil(10_000) { shadowOf(Looper.getMainLooper()).idle(); generated.get() }

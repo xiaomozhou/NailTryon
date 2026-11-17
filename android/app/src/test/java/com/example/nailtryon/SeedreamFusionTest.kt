@@ -47,7 +47,7 @@ class SeedreamFusionTest {
         try {
             SeedreamFusion.generate(context,blank,blank,NailCatalog.styles.first(),SeedreamTryOnClient("http://127.0.0.1:1/not-called"))
             fail("Invalid hand must not generate")
-        } catch(error:IllegalArgumentException){assertTrue(error.message!!.contains("左手手背"))}
+        } catch(error:IllegalArgumentException){assertTrue(error.message!!.contains("指甲清晰可见"))}
     }
     private fun data(bitmap:Bitmap):String {
         val output=java.io.ByteArrayOutputStream();bitmap.compress(Bitmap.CompressFormat.PNG,100,output)
@@ -78,6 +78,7 @@ class SeedreamFusionTest {
                     while(offset<bytesIn.size){val n=input.read(bytesIn,offset,bytesIn.size-offset);check(n>0);offset+=n}
                     received=Json.decodeFromString<SeedreamTryOnRequest>(String(bytesIn,Charsets.UTF_8))
                     assertEquals("demo",headers["x-client-token"])
+                    assertEquals("ap-northeast-1", headers["x-region"])
                     val payload=if(status==200)"""{"imageDataUrl":"${data(result)}","model":"${SeedreamPrompt.defaultModel}"}""" else "{}"
                     val bytes=payload.toByteArray()
                     socket.getOutputStream().use { out ->out.write("HTTP/1.1 $status OK\r\nContent-Type: application/json\r\nContent-Length: ${bytes.size}\r\nConnection: close\r\n\r\n".toByteArray());out.write(bytes);out.flush() }
@@ -86,14 +87,17 @@ class SeedreamFusionTest {
         }
         try {
             val hand=photo();val kit=NailKitStore.catalogReference(context,NailCatalog.styles.first().drawableName)
-            val guide=hand.copy(Bitmap.Config.ARGB_8888,true)
-            val client=SeedreamTryOnClient("http://127.0.0.1:${server.localPort}/tryon","demo")
+            val client=SeedreamTryOnClient("http://127.0.0.1:${server.localPort}/tryon","demo", region = "ap-northeast-1")
             val generated=SeedreamFusion.generate(context,hand,kit,NailCatalog.styles.first(),client)
-            assertEquals(hand.width,generated.width);assertEquals(hand.height,generated.height)
-            assertEquals(Color.BLUE,generated.getPixel(50,50));assertNotNull(received!!.guideImage)
+            assertFalse(generated.onDevice)
+            assertEquals(hand.width,generated.bitmap.width);assertEquals(hand.height,generated.bitmap.height)
+            assertEquals(Color.BLUE,generated.bitmap.getPixel(50,50));assertNotNull(received!!.guideImage)
             assertTrue(received!!.prompt.contains("拇指、食指、中指、无名指、小指"))
             assertTrue(received!!.prompt.contains("${hand.width}:${hand.height}"))
-            status=502;assertNull(client.generate(hand,kit,NailCatalog.styles.first(),guide))
+            status = 502
+            val fallback = SeedreamFusion.generate(context, hand, kit, NailCatalog.styles.first(), client)
+            assertTrue(fallback.onDevice)
+            assertFalse(hand.sameAs(fallback.bitmap))
         }finally{server.close();worker.join(5000)}
         failures.get()?.let{throw it}
     }

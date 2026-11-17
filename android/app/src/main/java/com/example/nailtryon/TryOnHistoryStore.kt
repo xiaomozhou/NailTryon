@@ -19,6 +19,7 @@ internal data class TryOnHistoryEntry(
     val createdAt: Long,
     val width: Int,
     val height: Int,
+    val onDevice: Boolean = false,
 )
 
 /** App-private, lossless originals. noBackupFilesDir keeps these out of reinstall backups. */
@@ -29,10 +30,10 @@ internal class TryOnHistoryStore(
     private val json = Json { ignoreUnknownKeys = true }
 
     @Synchronized
-    fun save(style: NailStyle, bitmap: Bitmap): TryOnHistoryEntry {
+    fun save(style: NailStyle, bitmap: Bitmap, onDevice: Boolean = false): TryOnHistoryEntry {
         require(!bitmap.isRecycled) { "Result bitmap is unavailable" }
         if (!directory.isDirectory && !directory.mkdirs()) throw IOException("Cannot create history directory")
-        val entry = TryOnHistoryEntry(UUID.randomUUID().toString(), style.name, style.category, now(), bitmap.width, bitmap.height)
+        val entry = TryOnHistoryEntry(UUID.randomUUID().toString(), style.name, style.category, now(), bitmap.width, bitmap.height, onDevice)
         val image = imageFile(entry)
         val metadata = File(directory, "${entry.id}.json")
         val imageTemp = File(directory, "${entry.id}.png.tmp")

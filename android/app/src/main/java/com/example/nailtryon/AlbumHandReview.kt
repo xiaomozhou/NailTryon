@@ -59,13 +59,13 @@ internal fun AlbumHandReview(
             if(check==null && !failed) {
                 Column(Modifier.background(Color.Black.copy(alpha=.7f)).padding(16.dp),horizontalAlignment=Alignment.CenterHorizontally) {
                     CircularProgressIndicator(Modifier.size(28.dp),color=Color.White)
-                    Text("正在检查左手手背和五指状态…",color=Color.White,modifier=Modifier.padding(top=12.dp))
+                    Text("正在检测指甲…",color=Color.White,modifier=Modifier.padding(top=12.dp))
                 }
             }
         }
         val inspection=check;val image=photo
         if(failed) Text("照片检查失败，请重新选择或拍照",color=Color.White,modifier=Modifier.padding(bottom=12.dp))
-        else if(inspection?.accepted==true) Text("照片符合要求，已检测到五片指甲，请检查轮廓",color=Color.White,modifier=Modifier.padding(bottom=12.dp))
+        else if(inspection?.accepted==true) Text("已检测到${inspection.nails!!.usableRegions.size}片清晰指甲，可继续试戴",color=Color.White,modifier=Modifier.padding(bottom=12.dp))
         else inspection?.problems?.forEach { Text(it.message,color=Color.White,modifier=Modifier.padding(bottom=8.dp)) }
         if(failed || inspection?.accepted==false) Button(onClick=onCamera,modifier=Modifier.fillMaxWidth().testTag("album-open-camera")){Text("去拍一张")}
         Button(onClick={if(image!=null && inspection?.accepted==true)onAccepted(image,inspection.nails!!)},

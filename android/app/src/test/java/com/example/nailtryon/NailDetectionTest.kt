@@ -46,15 +46,16 @@ class NailDetectionTest {
         assertEquals(4,nail.orientedCorners.size)
         assertFalse(nail.touchesImageEdge)
     }
-    @Test fun fiveRequiredAndClippedOrLowConfidenceMasksAreNeverReadyForAlignment() {
+    @Test fun clearNailMasksCanBeUsedEvenWhenOthersAreMissingOrClipped() {
         val full=ByteArray(20*30){(-1).toByte()}
         val nail=NailMaskGeometry.region(full,NailBox(10,10,30,40),.9f,100,100)!!
         assertTrue(NailDetection(100,100,List(5){nail}).readyForAlignment)
-        assertFalse(NailDetection(100,100,List(4){nail}).readyForAlignment)
-        assertFalse(NailDetection(100,100,List(6){nail}).readyForAlignment)
+        assertTrue(NailDetection(100,100,listOf(nail)).readyForAlignment)
+        assertFalse(NailDetection(100,100,emptyList()).readyForAlignment)
         assertFalse(NailDetection(100,100,List(5){nail.copy(confidence=.59f)}).readyForAlignment)
         val edge=NailMaskGeometry.region(full,NailBox(0,0,20,30),.9f,100,100)!!
         assertTrue(edge.touchesImageEdge)
+        assertEquals(listOf(nail), NailDetection(100,100,listOf(edge,nail)).usableRegions)
         assertFalse(NailDetection(100,100,List(5){edge}).readyForAlignment)
         assertNull(NailMaskGeometry.region(ByteArray(600),NailBox(0,0,20,30),.9f,100,100))
     }

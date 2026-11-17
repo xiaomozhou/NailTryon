@@ -63,11 +63,11 @@ class AlbumHandFlowTest {
         app{_,image->assertEquals(1000,image.width);pending.await()}
         choose()
         compose.waitUntil(10000){shadowOf(Looper.getMainLooper()).idle();inspected.get()==1}
-        compose.onNodeWithText("正在检查左手手背和五指状态…").assertExists()
+        compose.onNodeWithText("正在检测指甲…").assertExists()
         compose.onNodeWithTag("accept-album-hand").assertIsNotEnabled()
         assertNull(generated.get())
-        compose.runOnIdle{pending.complete(AlbumHandCheck(emptyList(),HandPolicyFixture.nails()))}
-        waitText("照片符合要求，已检测到五片指甲，请检查轮廓")
+        compose.runOnIdle{pending.complete(AlbumHandCheck(emptyList(),HandPolicyFixture.nails().let{it.copy(regions=it.regions.take(3))}))}
+        waitText("已检测到3片清晰指甲，可继续试戴")
         compose.onNodeWithTag("nail-detection-contours").assertExists()
         assertNull(generated.get())
         compose.onNodeWithTag("accept-album-hand").assertIsEnabled().performClick()
@@ -78,8 +78,8 @@ class AlbumHandFlowTest {
         compose.onNodeWithContentDescription("试戴结果").assertExists()
     }
     @Test fun invalidPhotoOffersGuidedCameraAndCancellationThenSuccessfulCapturePreservesSelection() {
-        app{_,_->AlbumHandCheck(listOf(HandPhotoProblem.LEFT_REQUIRED))}
-        choose();waitText(HandPhotoProblem.LEFT_REQUIRED.message)
+        app{_,_->AlbumHandCheck(listOf(HandPhotoProblem.NAILS_REQUIRED))}
+        choose();waitText(HandPhotoProblem.NAILS_REQUIRED.message)
         compose.onNodeWithTag("accept-album-hand").assertIsNotEnabled()
         assertNull(generated.get())
         compose.onNodeWithText("去拍一张").performClick()
@@ -87,7 +87,7 @@ class AlbumHandFlowTest {
         assertEquals(FullSizePicture.ACTION,first.intent.action)
         assertEquals(HandCameraActivity::class.java.name,first.intent.component!!.className)
         compose.runOnUiThread{compose.activity.activityResultRegistry.dispatchResult(first.requestCode,Activity.RESULT_CANCELED,null)}
-        waitText(HandPhotoProblem.LEFT_REQUIRED.message)
+        waitText(HandPhotoProblem.NAILS_REQUIRED.message)
         compose.onNodeWithText("去拍一张").performClick()
         val next=shadowOf(compose.activity).nextStartedActivityForResult
         val output=next.intent.getParcelableExtra<Uri>(MediaStore.EXTRA_OUTPUT)!!
@@ -126,7 +126,7 @@ class AlbumHandFlowTest {
         compose.waitUntil(10000){shadowOf(Looper.getMainLooper()).idle();inspected.get()==1}
         compose.onNodeWithText("返回").performClick()
         compose.onNodeWithText("上传我的美甲图").assertExists()
-        compose.runOnIdle{pending.complete(AlbumHandCheck(emptyList(),HandPolicyFixture.nails()))}
+        compose.runOnIdle{pending.complete(AlbumHandCheck(emptyList(),HandPolicyFixture.nails().let{it.copy(regions=it.regions.take(3))}))}
         compose.onNodeWithText("上传我的美甲图").assertExists()
         assertNull(generated.get())
     }

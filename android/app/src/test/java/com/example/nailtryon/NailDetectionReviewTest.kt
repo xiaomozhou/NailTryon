@@ -50,7 +50,7 @@ class NailDetectionReviewTest {
         compose.onNodeWithTag("accept-nail-detection").assertIsNotEnabled()
         val detection=result()
         compose.runOnIdle { pending.complete(detection) }
-        waitText("已检测到五片指甲，请检查轮廓是否贴合指甲边缘")
+        waitText("已检测到5片清晰指甲，可继续试戴")
         compose.onNodeWithTag("nail-detection-contours").assertExists()
         assertNull(accepted.get())
         assertEquals(600,analyzed.get()!!.width);assertEquals(800,analyzed.get()!!.height)
@@ -60,11 +60,19 @@ class NailDetectionReviewTest {
             assertTrue(Color.red(pixel)<5 && Color.blue(pixel)>250)
         }
         compose.onNodeWithTag("accept-nail-detection").assertIsEnabled().performClick()
-        assertSame(detection,accepted.get())
+        assertEquals(detection,accepted.get())
     }
-    @Test fun partialDetectionDisplaysCountDisablesAcceptanceAndAllowsRetake() {
-        compose.setContent { MaterialTheme { NailDetectionReview(uri,{accepted.set(it)},{retakes++}) { _,_ -> result(4) } } }
-        waitText("检测到4片指甲，请露出全部五片指甲后重拍")
+    @Test fun partialDetectionAllowsUsingOnlyTheClearNails() {
+        val detected = result(4)
+        val mixed = detected.copy(regions = detected.regions + result(1).regions.single().copy(confidence = .4f))
+        compose.setContent { MaterialTheme { NailDetectionReview(uri,{accepted.set(it)},{retakes++}) { _,_ -> mixed } } }
+        waitText("已检测到4片清晰指甲，可继续试戴")
+        compose.onNodeWithTag("accept-nail-detection").assertIsEnabled().performClick()
+        assertEquals(detected, accepted.get())
+    }
+    @Test fun noClearNailsDisablesAcceptanceAndAllowsRetake() {
+        compose.setContent { MaterialTheme { NailDetectionReview(uri,{accepted.set(it)},{retakes++}) { _,_ -> result(0) } } }
+        waitText("未检测到清晰指甲，请调整光线后重拍")
         compose.onNodeWithTag("accept-nail-detection").assertIsNotEnabled()
         compose.onNodeWithText("重新拍摄").performClick()
         assertEquals(1,retakes);assertNull(accepted.get())

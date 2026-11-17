@@ -44,7 +44,9 @@ internal fun NailDetectionReview(
             val image=withContext(Dispatchers.IO) { CameraPhotos.read(context,output) }
                 ?: error("Unreadable photo")
             photo=image
-            result=detect(context,image).also { require(it.width==image.width && it.height==image.height) }
+            val detection = detect(context,image)
+            require(detection.width == image.width && detection.height == image.height)
+            result = detection.copy(regions = detection.usableRegions)
         } catch(cancel:CancellationException) { throw cancel }
         catch(_:Exception) { failed=true }
     }
@@ -57,7 +59,7 @@ internal fun NailDetectionReview(
                 val ratio=image.width.toFloat()/image.height
                 val frameWidth=minOf(maxWidth,maxHeight*ratio)
                 Box(Modifier.width(frameWidth).aspectRatio(ratio).testTag("nail-detection-photo")) {
-                    Image(image.asImageBitmap(),"拍摄的左手照片",Modifier.fillMaxSize())
+                    Image(image.asImageBitmap(),"拍摄的手部照片",Modifier.fillMaxSize())
                     result?.let { NailDetectionOverlay(it,Modifier.fillMaxSize()) }
                 }
             }
@@ -72,9 +74,8 @@ internal fun NailDetectionReview(
         val message=when {
             failed -> "指甲检测失败，请重新拍摄"
             detection==null -> "正在分析指甲边缘，请稍候"
-            detection.readyForAlignment -> "已检测到五片指甲，请检查轮廓是否贴合指甲边缘"
-            detection.regions.size==5 -> "部分指甲边缘不完整或不够清晰，请调整光线后重拍"
-            else -> "检测到${detection.regions.size}片指甲，请露出全部五片指甲后重拍"
+            detection.readyForAlignment -> "已检测到${detection.regions.size}片清晰指甲，可继续试戴"
+            else -> "未检测到清晰指甲，请调整光线后重拍"
         }
         Text(message,color=Color.White,modifier=Modifier.padding(bottom=16.dp))
         Button(onClick={ detection?.let(onAccepted) },enabled=detection?.readyForAlignment==true,
@@ -88,7 +89,22 @@ internal fun NailDetectionOverlay(result:NailDetection,modifier:Modifier=Modifie
         val sx=size.width/result.width; val sy=size.height/result.height
         result.regions.forEach { region ->
             val path=Path()
-            region.contour.forEachIndexed { i,p -> if(i==0) path.moveTo(p.x*sx,p.y*sy) else path.lineTo(p.x*sx,p.y*sy) }
+            val points = region.contour
+            points.forEachIndexed { i, point ->
+                val previous = points[(i + points.size - 1) % points.size]
+                val next = points[(i + 1) % points.size]
+                fun roundedToward(other: NailPoint): NailPoint {
+                    val dx = other.x - point.x
+                    val dy = other.y - point.y
+                    val fraction = (2.5f / kotlin.math.hypot(dx, dy)).coerceAtMost(.5f)
+                    return NailPoint(point.x + dx * fraction, point.y + dy * fraction)
+                }
+                val start = roundedToward(previous)
+                val end = roundedToward(next)
+                if (i == 0) path.moveTo(start.x * sx, start.y * sy)
+                else path.lineTo(start.x * sx, start.y * sy)
+                path.quadraticTo(point.x * sx, point.y * sy, end.x * sx, end.y * sy)
+            }
             path.close()
             drawPath(path,Color(0xFF72E8CB).copy(alpha=.16f))
             drawPath(path,Color(0xFF72E8CB),style=Stroke(1.5.dp.toPx()))
