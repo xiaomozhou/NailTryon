@@ -9,8 +9,6 @@ import kotlin.math.abs
 /** Guides Seedream with clear nail masks and any available anatomical finger labels. */
 internal data class GeneratedTryOn(val bitmap: Bitmap, val onDevice: Boolean = false)
 
-internal enum class TryOnMode { AUTOMATIC, LOCAL, CLOUD }
-
 internal object SeedreamFusion {
     suspend fun generate(
         context: Context,
@@ -19,7 +17,6 @@ internal object SeedreamFusion {
         style: NailStyle,
         client: SeedreamTryOnClient,
         customDirectory: String? = null,
-        mode: TryOnMode = TryOnMode.AUTOMATIC,
     ): GeneratedTryOn {
         val check=inspectAlbumHand(context,hand)
         require(check.accepted){"请换一张指甲清晰可见的手部照片"}
@@ -29,7 +26,6 @@ internal object SeedreamFusion {
                 NailKitStore.loadPieces(context, style, customDirectory)
             }, onDevice = true)
         }
-        if (mode == TryOnMode.LOCAL) return localPreview()
         val guide = withContext(Dispatchers.Default) { guide(hand, nails) }
         try {
             val generated = client.generate(hand, kit, style, guide)
@@ -41,7 +37,6 @@ internal object SeedreamFusion {
             }
         } catch (error: TryOnCloudException) {
             android.util.Log.w("NailTryOn", error.message.orEmpty())
-            if (mode == TryOnMode.CLOUD) throw error
             return localPreview()
         } finally {guide.recycle()}
     }

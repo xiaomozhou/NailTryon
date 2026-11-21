@@ -47,7 +47,7 @@ class AlbumHandFlowTest {
         } }
     }
     private fun picker() : org.robolectric.shadows.ShadowActivity.IntentForResult {
-        compose.onAllNodesWithText("试戴")[0].performClick()
+        compose.onAllNodesWithText("试戴")[0].performScrollTo().performClick()
         compose.onNodeWithText("从相册选择").performClick()
         val request=shadowOf(compose.activity).nextStartedActivityForResult
         assertEquals(Intent.ACTION_GET_CONTENT,request.intent.action);assertEquals("image/*",request.intent.type)
@@ -125,9 +125,9 @@ class AlbumHandFlowTest {
         app{_,_->pending.await()};choose()
         compose.waitUntil(10000){shadowOf(Looper.getMainLooper()).idle();inspected.get()==1}
         compose.onNodeWithText("返回").performClick()
-        compose.onNodeWithText("上传我的美甲图").assertExists()
+        compose.onNodeWithText("美甲试戴").assertExists()
         compose.runOnIdle{pending.complete(AlbumHandCheck(emptyList(),HandPolicyFixture.nails().let{it.copy(regions=it.regions.take(3))}))}
-        compose.onNodeWithText("上传我的美甲图").assertExists()
+        compose.onNodeWithText("美甲试戴").assertExists()
         assertNull(generated.get())
     }
 }

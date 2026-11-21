@@ -36,17 +36,26 @@ internal suspend fun analyzeNailKit(context:Context,photo:Bitmap):NailKitAnalysi
     return withContext(Dispatchers.Default) {
         val candidates=mutableListOf<NailRegion>()
         kitSegmenter(context,photo).use { segmenter ->
-            // Grid proposals are conservative; incomplete/ambiguous rows require five explicit points.
-            for(y in 2..8)for(x in 1..9) {
-                ensureActive()
-                val point=NailPoint(photo.width*x/10f,photo.height*y/10f)
-                val region=segmenter.segment(point,null)?:continue
-                val c=region.orientedCorners
-                val long=hypot(c[1].x-c[0].x,c[1].y-c[0].y);val short=hypot(c[2].x-c[1].x,c[2].y-c[1].y)
-                val ratio=max(long,short)/min(long,short).coerceAtLeast(1f)
-                if(region.touchesImageEdge || ratio !in 1.1f..5f)continue
-                val old=candidates.indexOfFirst{NailPostprocess.iou(it.box,region.box)>.5f}
-                if(old<0)candidates.add(region)else if(candidates[old].confidence<region.confidence)candidates[old]=region
+            // Refine the sampling when narrow or tilted nails fall between the coarse grid points.
+            for(divisions in listOf(10,20)) {
+                for(y in 1 until divisions)for(x in 1 until divisions) {
+                    ensureActive()
+                    val point=NailPoint(photo.width*x/divisions.toFloat(),photo.height*y/divisions.toFloat())
+                    val covered=candidates.any { region ->
+                        val box=region.box;val px=point.x.toInt();val py=point.y.toInt()
+                        px in box.left until box.right && py in box.top until box.bottom &&
+                            region.mask[(py-box.top)*box.width+px-box.left].toInt()!=0
+                    }
+                    if(covered)continue
+                    val region=segmenter.segment(point,null)?:continue
+                    val c=region.orientedCorners
+                    val long=hypot(c[1].x-c[0].x,c[1].y-c[0].y);val short=hypot(c[2].x-c[1].x,c[2].y-c[1].y)
+                    val ratio=max(long,short)/min(long,short).coerceAtLeast(1f)
+                    if(region.touchesImageEdge || ratio !in 1.1f..5f)continue
+                    val old=candidates.indexOfFirst{NailPostprocess.iou(it.box,region.box)>.5f}
+                    if(old<0)candidates.add(region)else if(candidates[old].confidence<region.confidence)candidates[old]=region
+                }
+                if(NailKitLayout.rows(candidates.sortedByDescending{it.confidence}.take(20)).isNotEmpty())break
             }
         }
         val rows=NailKitLayout.rows(candidates.sortedByDescending{it.confidence}.take(20)).map{KitRow(separateKitMasks(it.regions,photo.width,photo.height))}

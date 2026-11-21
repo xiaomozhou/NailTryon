@@ -23,15 +23,17 @@ internal object NailKitLayout {
                 var ux=(b.x-a.x)/length;var uy=(b.y-a.y)/length
                 if(ux<0 || (abs(ux)<.01f && uy<0)){ux=-ux;uy=-uy}
                 val width=remaining.map{min(it.box.width,it.box.height).toFloat()}.sorted()[remaining.size/2]
-                val near=remaining.filter{abs((it.center.x-a.x)*uy-(it.center.y-a.y)*ux)<width*.65f}
+                val near=remaining.filter{abs((it.center.x-a.x)*uy-(it.center.y-a.y)*ux)<width*.4f}
                     .sortedBy{it.center.x*ux+it.center.y*uy}
-                if(near.size!=5)continue
-                val positions=near.map{it.center.x*ux+it.center.y*uy}
-                val gaps=positions.zipWithNext().map{it.second-it.first}
-                if(gaps.min()<width*.45f || gaps.max()>gaps.min()*2.4f)continue
-                val residual=near.sumOf{abs((it.center.x-a.x)*uy-(it.center.y-a.y)*ux).toDouble()}.toFloat()/width
-                val score=near.sumOf{it.confidence.toDouble()}.toFloat()-residual*.15f
-                if(score>bestScore){bestScore=score;best=near}
+                for(group in near.windowed(5)) {
+                    val positions=group.map{it.center.x*ux+it.center.y*uy}
+                    val gaps=positions.zipWithNext().map{it.second-it.first}
+                    // A double-width gap often means a missing nail followed by a background object.
+                    if(gaps.min()<width*.45f || gaps.max()>gaps.min()*1.8f)continue
+                    val residual=group.sumOf{abs((it.center.x-a.x)*uy-(it.center.y-a.y)*ux).toDouble()}.toFloat()/width
+                    val score=group.sumOf{it.confidence.toDouble()}.toFloat()-residual*.15f
+                    if(score>bestScore){bestScore=score;best=group}
+                }
             }
             if(best==null)break
             result.add(KitRow(best));remaining.removeAll(best.toSet())

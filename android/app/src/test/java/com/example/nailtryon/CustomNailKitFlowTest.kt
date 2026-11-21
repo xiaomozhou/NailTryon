@@ -26,7 +26,7 @@ import org.robolectric.annotation.GraphicsMode
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class CustomNailKitFlowTest {
     @get:Rule val compose=createAndroidComposeRule<MainActivity>()
-    @Test fun confirmedKitContinuesToHandUploadAndOnlyFivePieceReferenceReachesExistingGenerator() {
+    @Test fun automaticKitCreatesCardAndItsTryOnUsesFivePieceReference() {
         PortableFileProviderPaths.install(compose.activity)
         val reference=AtomicReference<Bitmap?>();val hand=AtomicReference<Bitmap?>()
         compose.runOnUiThread{compose.activity.setContent{
@@ -38,9 +38,11 @@ class CustomNailKitFlowTest {
         compose.onNodeWithText("上传我的美甲图").performClick()
         val request=shadowOf(compose.activity).nextStartedActivityForResult
         compose.runOnUiThread{compose.activity.activityResultRegistry.dispatchResult(request.requestCode,Activity.RESULT_OK,Intent().setData(Uri.fromFile(source)))}
-        compose.waitUntil(10000){compose.onAllNodesWithText("已选择左手五片").fetchSemanticsNodes().isNotEmpty()}
+        compose.waitUntil(10000){compose.onAllNodesWithTag("custom-nail-card").fetchSemanticsNodes().isNotEmpty()}
         assertNull(reference.get())
-        compose.onNodeWithTag("accept-nail-kit").performScrollTo().performClick()
+        compose.onNodeWithText("使用这组五片").assertDoesNotExist()
+        compose.onNodeWithText("选择照片").assertDoesNotExist()
+        compose.onNodeWithTag("custom-nail-card").onChildren().filterToOne(hasText("试戴")).performScrollTo().performClick()
         compose.waitUntil(10000){compose.onAllNodesWithText("选择照片").fetchSemanticsNodes().isNotEmpty()}
         compose.onNodeWithText("拍照").performClick()
         val capture=shadowOf(compose.activity).nextStartedActivityForResult

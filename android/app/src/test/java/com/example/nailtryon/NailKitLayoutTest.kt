@@ -45,4 +45,12 @@ class NailKitLayoutTest {
         assertEquals(rows[0].regions.map{it.center.x},groups[0].regions.map{it.center.x})
         assertTrue(NailKitLayout.rows(tilted.take(4)).isEmpty())
     }
+
+    @Test fun backgroundObjectBesideACompleteRowDoesNotPreventAutomaticGrouping() {
+        val row=KitTestFixture.row()
+        val distractor=row.regions.first().copy(center=NailPoint(-400f,200f),confidence=.71f)
+        val groups=NailKitLayout.rows(row.regions+distractor)
+        assertEquals(1,groups.size)
+        assertEquals(row.regions,groups.single().regions)
+    }
 }

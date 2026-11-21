@@ -33,10 +33,13 @@ internal object NailKitStore {
         }finally{upright.forEach{it.recycle()}}
     }
 
-    fun save(context:Context,source:Bitmap,regions:List<NailRegion>,selection:String):File {
+    fun save(
+        context:Context,source:Bitmap,regions:List<NailRegion>,selection:String,
+        root:File = File(context.cacheDir,"prepared-nail-kits"),
+    ):File {
         require(regions.size==5)
         require(regions.indices.all{i->(i+1..4).all{j->NailPostprocess.iou(regions[i].box,regions[j].box)<.45f}})
-        val root=File(context.cacheDir,"prepared-nail-kits").apply{check(isDirectory||mkdirs())}
+        check(root.isDirectory||root.mkdirs())
         val directory=File(root,UUID.randomUUID().toString()).apply{check(mkdir())}
         fun png(file:File,image:Bitmap){file.outputStream().use{check(image.compress(Bitmap.CompressFormat.PNG,100,it))}}
         try {

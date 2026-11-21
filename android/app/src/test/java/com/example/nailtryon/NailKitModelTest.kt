@@ -64,4 +64,27 @@ class NailKitModelTest {
         assertTrue(reference.width>reference.height)
         assertEquals(Color.WHITE,reference.getPixel(0,0))
     }
+
+    @Test fun automaticUploadExtractsOneFivePieceRowFromRealFiveAndTenPieceImages() = runBlocking {
+        val context=RuntimeEnvironment.getApplication()
+        for(path in listOf("src/main/res/drawable/nail_cherry.png","src/main/assets/nail-kits/nail_cherry/reference.png")){
+            val source=BitmapFactory.decodeFile(path)
+            try {
+                val directory=prepareCustomNailKit(context,source)
+                val pieces=NailKitStore.loadPieces(context,NailStyle("custom","我的美甲","自选美甲",""),directory.path)
+                try {
+                    assertEquals(5,pieces.size)
+                    for(piece in pieces.values){
+                        val pixels=IntArray(piece.width*piece.height)
+                        piece.getPixels(pixels,0,piece.width,0,0,piece.width,piece.height)
+                        val opaque=pixels.filter{Color.alpha(it)>192}
+                        assertTrue("Expected red nail texture, not the background: $path",opaque.isNotEmpty())
+                        val red=opaque.count{Color.red(it)>Color.green(it)*1.4f && Color.red(it)>Color.blue(it)*1.3f}
+                        assertTrue("Every piece should contain the chosen red nail: $path",red>opaque.size*.6)
+                    }
+                    assertEquals(directory,CustomNailKitStore(context).load())
+                } finally { pieces.values.forEach{it.recycle()} }
+            } finally { source.recycle() }
+        }
+    }
 }

@@ -34,7 +34,7 @@ class CameraEntryTest {
         val permissions = activity.packageManager.getPackageInfo(activity.packageName, PackageManager.GET_PERMISSIONS)
             .requestedPermissions.orEmpty()
         assertTrue("Guided preview declares CAMERA permission", permissions.contains(Manifest.permission.CAMERA))
-        compose.onAllNodesWithText("试戴")[0].performClick()
+        compose.onAllNodesWithText("试戴")[0].performScrollTo().performClick()
         compose.onNodeWithText("拍照").performClick()
         val request = shadowOf(activity).nextStartedActivityForResult
         assertEquals(FullSizePicture.ACTION, request.intent.action)
@@ -44,9 +44,10 @@ class CameraEntryTest {
         compose.runOnUiThread {
             activity.activityResultRegistry.dispatchResult(request.requestCode, Activity.RESULT_CANCELED, null)
         }
+        compose.onNodeWithText("美甲试戴").assertExists()
         compose.onNodeWithText("上传我的美甲图").assertExists()
         assertFalse(activity.isFinishing)
-        compose.onAllNodesWithText("试戴")[0].performClick()
+        compose.onAllNodesWithText("试戴")[0].performScrollTo().performClick()
         compose.onNodeWithText("从相册选择").assertExists()
     }
 
@@ -57,7 +58,7 @@ class CameraEntryTest {
                 NailTryOnApp(generateTryOn = { hand, _, style -> uploaded.set(hand to style); hand })
             }
         }
-        compose.onAllNodesWithText("试戴")[0].performClick()
+        compose.onAllNodesWithText("试戴")[0].performScrollTo().performClick()
         compose.onNodeWithText("拍照").performClick()
         val request = shadowOf(compose.activity).nextStartedActivityForResult
         val uri = request.intent.getParcelableExtra<Uri>(MediaStore.EXTRA_OUTPUT)!!

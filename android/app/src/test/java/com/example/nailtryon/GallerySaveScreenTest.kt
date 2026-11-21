@@ -49,7 +49,7 @@ class GallerySaveScreenTest {
         source.outputStream().use { output ->
             javaClass.getResourceAsStream("/nail-detection/hand-1.jpg")!!.use { it.copyTo(output) }
         }
-        compose.onAllNodesWithText("试戴")[0].performClick()
+        compose.onAllNodesWithText("试戴")[0].performScrollTo().performClick()
         compose.onNodeWithText("从相册选择").performClick()
         val request = shadowOf(compose.activity).nextStartedActivityForResult
         compose.runOnUiThread {

@@ -30,14 +30,14 @@ class SeedreamFusionScreenTest {
     private fun selectHand() {
         val file=File(compose.activity.cacheDir,"fusion-hand.jpg")
         file.outputStream().use{output->javaClass.getResourceAsStream("/nail-detection/hand-1.jpg")!!.use{it.copyTo(output)}}
-        compose.onAllNodesWithText("试戴")[0].performClick();compose.onNodeWithText("从相册选择").performClick()
+        compose.onAllNodesWithText("试戴")[0].performScrollTo().performClick();compose.onNodeWithText("从相册选择").performClick()
         val pick=shadowOf(compose.activity).nextStartedActivityForResult
         compose.runOnUiThread{compose.activity.activityResultRegistry.dispatchResult(pick.requestCode,Activity.RESULT_OK,Intent().setData(Uri.fromFile(file)))}
         waitTag("accept-album-hand")
         compose.waitUntil(15000){compose.onNodeWithTag("accept-album-hand").fetchSemanticsNode().config.contains(androidx.compose.ui.semantics.SemanticsProperties.Disabled).not()}
         compose.onNodeWithTag("accept-album-hand").performClick()
     }
-    @Test fun unavailableCloudShowsLocalImageThatCanBeSavedAndMarkedInHistory() {
+    @Test fun unavailableCloudAutomaticallyShowsLocalImageWithoutModeLabels() {
         val gallery = TestGalleryProvider.install(compose.activity.applicationContext)
         val port = java.net.ServerSocket(0).use { it.localPort }
         val store = TryOnHistoryStore.forContext(compose.activity)
@@ -50,7 +50,8 @@ class SeedreamFusionScreenTest {
 
         selectHand()
         waitTag("result-image")
-        compose.onNodeWithText("本机试戴预览").assertExists()
+        compose.onNodeWithText("本机试戴预览", substring = true).assertDoesNotExist()
+        compose.onNodeWithText("云端 AI 生成", substring = true).assertDoesNotExist()
         compose.onNodeWithTag("generation-error").assertDoesNotExist()
         compose.onNodeWithText("保存").performScrollTo().assertIsEnabled().performClick()
         compose.waitUntil(10000) {
@@ -62,14 +63,11 @@ class SeedreamFusionScreenTest {
         val nailPixel = saved.getPixel(450, 148)
         assertTrue(Color.red(nailPixel) > Color.green(nailPixel) + 35)
         compose.waitUntil(10000) { store.load().any { it.id !in baseline && it.onDevice } }
-        compose.onNodeWithText("使用云端 AI 生成").performScrollTo().performClick()
-        waitTag("generation-error")
-        compose.onNodeWithText("试戴云服务连接失败，请切换手机网络后重试").assertExists()
-        compose.onNodeWithTag("result-image").assertDoesNotExist()
-        compose.onNodeWithText("使用本机预览").assertExists()
         assertEquals(1, store.load().count { it.id !in baseline })
+        val entry = store.load().single { it.id !in baseline }
         compose.onNodeWithText("历史").performClick()
-        compose.waitUntil(10000) { compose.onAllNodesWithText("本机试戴预览").fetchSemanticsNodes().isNotEmpty() }
+        waitTag("history-image-${entry.id}")
+        compose.onNodeWithText("本机试戴预览", substring = true).assertDoesNotExist()
     }
 
     @Test fun failedCloudDoesNotFakeSuccessOrSaveHistoryAndExplicitRetryCanSucceed() {
@@ -97,6 +95,8 @@ class SeedreamFusionScreenTest {
         compose.onNodeWithText("试戴生成失败，请稍后重试").assertExists()
         compose.onNodeWithTag("retry-generation").performClick()
         compose.waitUntil(5000){calls.get()==2}
+        compose.onNodeWithText("正在生成试戴效果").assertExists()
+        compose.onNodeWithText("先看本机预览").assertDoesNotExist()
         compose.onNodeWithText("美甲库").performClick()
         compose.runOnIdle{pending.complete(Bitmap.createBitmap(160,240,Bitmap.Config.ARGB_8888))}
         compose.waitForIdle();assertEquals(before,store.load().size)

@@ -35,6 +35,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.graphics.asImageBitmap
+import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.withContext
@@ -63,10 +64,29 @@ class MainActivity:ComponentActivity(){override fun onCreate(b:Bundle?){super.on
  val selected=NailCatalog.styles.firstOrNull{it.id==selectedId} ?: if(selectedId=="custom")NailStyle("custom","我的美甲","自选美甲","")else null
  var customNailUri by rememberSaveable{mutableStateOf<String?>(null)}
  var customKitDirectory by rememberSaveable{mutableStateOf<String?>(null)}
+ var customKitLoaded by remember{mutableStateOf(false)}
+ LaunchedEffect(context){
+  customKitDirectory=withContext(Dispatchers.IO){CustomNailKitStore(context).load()?.absolutePath}
+  if(customKitDirectory!=null)category="自选美甲"
+  customKitLoaded=true
+ }
  val nailAlbumLauncher=rememberLauncherForActivityResult(ActivityResultContracts.GetContent()){uri:Uri?->
-  if(uri!=null){
-   customNailUri=uri.toString();customKitDirectory=null;selectedId="custom";showSheet=false;screen="kit-review"
-  }
+  if(uri!=null)customNailUri=uri.toString()
+ }
+ LaunchedEffect(customNailUri){
+  val uri=customNailUri?:return@LaunchedEffect
+  var photo:Bitmap?=null
+  try {
+   val image=withContext(Dispatchers.IO){CameraPhotos.read(context,Uri.parse(uri))}
+    ?:error("无法读取美甲图")
+   photo=image
+   val directory=prepareCustomNailKit(context,image,kitAnalyzer)
+   customKitDirectory=directory.absolutePath
+   category="自选美甲"
+   screen="library"
+  }catch(cancel:CancellationException){throw cancel}
+  catch(_:Exception){withContext(Dispatchers.Main.immediate){Toast.makeText(context,"美甲图处理失败，请换一张图片重试",Toast.LENGTH_LONG).show()}}
+  finally{photo?.recycle();customNailUri=null}
  }
  val cloudClient = remember(cloudClientOverride) {
   cloudClientOverride ?: SeedreamTryOnClient(
@@ -78,9 +98,8 @@ class MainActivity:ComponentActivity(){override fun onCreate(b:Bundle?){super.on
  val albumLauncher=rememberLauncherForActivityResult(ActivityResultContracts.GetContent()){uri:Uri?->if(uri!=null){showSheet=false;albumHandUri=uri.toString();screen="album-review"}}
  var generationError by remember{mutableStateOf<String?>(null)}
  var generationAttempt by remember{mutableIntStateOf(0)}
- var tryOnMode by remember{mutableStateOf(TryOnMode.AUTOMATIC)}
- val capturePhoto=rememberCameraCapture{bitmap->showSheet=false;result=null;tryOnMode=TryOnMode.AUTOMATIC;source=bitmap;screen="result"}
- LaunchedEffect(source,selected,screen,generationAttempt,tryOnMode){
+ val capturePhoto=rememberCameraCapture{bitmap->showSheet=false;result=null;source=bitmap;screen="result"}
+ LaunchedEffect(source,selected,screen,generationAttempt){
   if(screen=="result"&&source!=null&&selected!=null){
    result=null;generationError=null
    try {
@@ -95,7 +114,7 @@ class MainActivity:ComponentActivity(){override fun onCreate(b:Bundle?){super.on
     GeneratedTryOn(generateTryOn(hand, nail, style) ?: error("试戴生成失败，请稍后重试"))
    } else {
     try {
-     SeedreamFusion.generate(context, hand, nail, style, cloudClient, customKitDirectory, tryOnMode)
+     SeedreamFusion.generate(context, hand, nail, style, cloudClient, customKitDirectory)
     } finally {
      nail.recycle()
     }
@@ -110,21 +129,24 @@ class MainActivity:ComponentActivity(){override fun onCreate(b:Bundle?){super.on
    catch(error:Exception){generationError=error.message?.takeIf{it.startsWith("请")||it.startsWith("试戴")}?:"试戴生成失败，请稍后重试";withContext(Dispatchers.Main.immediate){Toast.makeText(context,generationError,Toast.LENGTH_LONG).show()}}
   }
  }
- if(screen=="kit-review" && customNailUri!=null){
-  NailKitReview(Uri.parse(customNailUri),onAccepted={directory->customKitDirectory=directory.absolutePath;screen="library";showSheet=true},
-   onBack={screen="library"},analyze=kitAnalyzer)
-  return
- }
  if(screen=="album-review" && albumHandUri!=null){
-  AlbumHandReview(Uri.parse(albumHandUri),onAccepted={photo,_->result=null;tryOnMode=TryOnMode.AUTOMATIC;source=photo;albumHandUri=null;screen="result"},
+  AlbumHandReview(Uri.parse(albumHandUri),onAccepted={photo,_->result=null;source=photo;albumHandUri=null;screen="result"},
    onCamera={capturePhoto()},onBack={albumHandUri=null;screen="library"},inspect=albumInspector)
   return
  }
  Scaffold(containerColor=Bg,bottomBar={NavigationBar(containerColor=Color.White){NavigationBarItem(selected=screen=="library",onClick={screen="library"},icon={Text("✦")},label={Text("美甲库")});NavigationBarItem(selected=screen=="history",onClick={screen="history"},icon={Text("◷")},label={Text("历史")})}}){pad->
-  Box(Modifier.padding(pad).fillMaxSize()){when(screen){"history"->TryOnHistoryScreen(history,historyStore,historyLoaded);"result"->selected?.let{style->ResultScreen(style,result,generationError,onRetry={generationAttempt++},onLocal=if(tryOnMode==TryOnMode.LOCAL || generateTryOn!=null)null else { { tryOnMode=TryOnMode.LOCAL } },onCloud={
-   tryOnMode=TryOnMode.CLOUD
-   generationAttempt++
-  },saving=gallerySave.saving,onSave={photo->gallerySave.save(photo){}},onBack={screen="library"})};else->LibraryScreen(category,{category=it},{selectedId=it.id;showSheet=true},onUploadNail={nailAlbumLauncher.launch("image/*")})}}
+  Box(Modifier.padding(pad).fillMaxSize()){
+   when(screen){
+    "history"->TryOnHistoryScreen(history,historyStore,historyLoaded)
+    "result"->selected?.let{style->
+     ResultScreen(style,result,generationError,onRetry={generationAttempt++},
+      saving=gallerySave.saving,onSave={photo->gallerySave.save(photo){}},onBack={screen="library"})
+    }
+    else->LibraryScreen(category,{category=it},{selectedId=it.id;showSheet=true},
+     onUploadNail={nailAlbumLauncher.launch("image/*")},
+     customKit=customKitDirectory?.let(::File),uploading=customNailUri!=null,uploadEnabled=customKitLoaded)
+   }
+  }
   if(showSheet)UploadSheet(onDismiss={showSheet=false},onAlbum={albumLauncher.launch("image/*")},onCamera={showSheet=false;capturePhoto()})
  }
 }
@@ -138,13 +160,68 @@ internal fun decodeUri(context: android.content.Context, uri: Uri): Bitmap? {
     return decoded ?: runCatching {context.contentResolver.openInputStream(uri)?.use{BitmapFactory.decodeStream(it)}}.getOrNull()
 }
 
-@Composable private fun LibraryScreen(category:String,onCategory:(String)->Unit,onStyle:(NailStyle)->Unit,onUploadNail:()->Unit){
- Column(Modifier.fillMaxSize().padding(horizontal=16.dp)){Row(Modifier.horizontalScroll(rememberScrollState()).padding(top=18.dp,bottom=12.dp),horizontalArrangement=Arrangement.spacedBy(8.dp)){NailCatalog.categories.forEach{c->FilterChip(selected=c==category,onClick={onCategory(c)},label={Text(c.removeSuffix("美甲"))})}}
- Row(Modifier.fillMaxWidth().background(Soft,RoundedCornerShape(16.dp)).clickable{onUploadNail()},verticalAlignment=Alignment.CenterVertically){Text("＋",color=Coral,fontSize=22.sp,modifier=Modifier.padding(start=16.dp));Text("上传我的美甲图",color=Coral,fontSize=14.sp,modifier=Modifier.padding(12.dp));Spacer(Modifier.weight(1f));Text("›",color=Coral,fontSize=22.sp,modifier=Modifier.padding(end=16.dp))}
- Spacer(Modifier.height(14.dp)); LazyVerticalGrid(columns=GridCells.Fixed(2),horizontalArrangement=Arrangement.spacedBy(12.dp),verticalArrangement=Arrangement.spacedBy(12.dp),modifier=Modifier.fillMaxSize().testTag("nail-catalog")){items(NailCatalog.byCategory(category)){style->NailCard(style,onStyle)}}}
+@Composable private fun LibraryScreen(
+ category:String,onCategory:(String)->Unit,onStyle:(NailStyle)->Unit,onUploadNail:()->Unit,
+ customKit:File?,uploading:Boolean,uploadEnabled:Boolean,
+){
+ val categoryScroll=rememberScrollState()
+ val categories=if(customKit!=null)listOf("自选美甲")+NailCatalog.categories else NailCatalog.categories
+ LaunchedEffect(category,customKit){if(category=="自选美甲")categoryScroll.scrollTo(0)}
+ Column(Modifier.fillMaxSize().padding(horizontal=16.dp)){
+  Text("美甲试戴",color=Ink,fontSize=23.sp,modifier=Modifier.align(Alignment.CenterHorizontally).padding(top=18.dp))
+  Row(Modifier.horizontalScroll(categoryScroll).padding(top=18.dp,bottom=12.dp),horizontalArrangement=Arrangement.spacedBy(8.dp)){
+   categories.forEach{c->
+    FilterChip(selected=c==category,onClick={onCategory(c)},modifier=Modifier.testTag("category-$c"),
+     label={Text(if(c=="自选美甲")c else c.removeSuffix("美甲"))})
+   }
+  }
+  Row(
+   Modifier.fillMaxWidth().background(Soft,RoundedCornerShape(16.dp))
+    .clickable(enabled=uploadEnabled && !uploading,onClick=onUploadNail),
+   verticalAlignment=Alignment.CenterVertically,
+  ){
+   Text("＋",color=Coral,fontSize=22.sp,modifier=Modifier.padding(start=16.dp))
+   Text(if(uploading)"正在处理美甲图…" else "上传我的美甲图",color=Coral,fontSize=14.sp,modifier=Modifier.padding(12.dp))
+   Spacer(Modifier.weight(1f))
+   if(uploading)CircularProgressIndicator(Modifier.padding(end=16.dp).size(22.dp),color=Coral,strokeWidth=2.dp)
+   else Text("›",color=Coral,fontSize=22.sp,modifier=Modifier.padding(end=16.dp))
+  }
+  Spacer(Modifier.height(14.dp))
+  LazyVerticalGrid(columns=GridCells.Fixed(2),horizontalArrangement=Arrangement.spacedBy(12.dp),verticalArrangement=Arrangement.spacedBy(12.dp),modifier=Modifier.fillMaxSize().testTag("nail-catalog")){
+   if(category=="自选美甲" && customKit!=null)item(key="custom"){
+    NailCard(NailStyle("custom","我的美甲","自选美甲",""),onStyle,
+     customImage=File(customKit,"source.png"),modifier=Modifier.testTag("custom-nail-card"),enabled=!uploading)
+   }
+   if(category!="自选美甲")items(NailCatalog.byCategory(category),key={it.id}){style->NailCard(style,onStyle)}
+  }
+ }
 }
 
-@Composable private fun NailCard(style:NailStyle,onStyle:(NailStyle)->Unit){val ctx=LocalContext.current;val res=ctx.resources.getIdentifier(style.drawableName,"drawable",ctx.packageName);Card(colors=CardDefaults.cardColors(Color.White),shape=RoundedCornerShape(18.dp)){Column(Modifier.padding(8.dp)){if(res!=0)Image(painterResource(res),contentDescription=style.name,contentScale=ContentScale.Crop,modifier=Modifier.fillMaxWidth().height(138.dp).background(Soft,RoundedCornerShape(14.dp))) else Box(Modifier.fillMaxWidth().height(138.dp).background(Soft,RoundedCornerShape(14.dp)),contentAlignment=Alignment.Center){Text("美甲图",color=Muted,fontSize=13.sp)};Text(style.name,color=Ink,fontSize=14.sp,modifier=Modifier.padding(top=8.dp,start=4.dp));Text(style.category,color=Muted,fontSize=11.sp,modifier=Modifier.padding(start=4.dp,top=3.dp));Button(onClick={onStyle(style)},colors=ButtonDefaults.buttonColors(Coral),shape=RoundedCornerShape(18.dp),modifier=Modifier.fillMaxWidth().padding(top=6.dp)){Text("试戴",fontSize=12.sp)}}}}
+@Composable private fun NailCard(
+ style:NailStyle,onStyle:(NailStyle)->Unit,customImage:File?=null,modifier:Modifier=Modifier,enabled:Boolean=true,
+){
+ val ctx=LocalContext.current
+ val res=ctx.resources.getIdentifier(style.drawableName,"drawable",ctx.packageName)
+ Card(modifier=modifier,colors=CardDefaults.cardColors(Color.White),shape=RoundedCornerShape(18.dp)){
+  Column(Modifier.padding(8.dp)){
+   val imageModifier=Modifier.fillMaxWidth().height(138.dp).background(Soft,RoundedCornerShape(14.dp))
+   if(customImage!=null){
+    val bitmap by produceState<Bitmap?>(null,customImage){
+     value=withContext(Dispatchers.IO){BitmapFactory.decodeFile(customImage.path)}
+    }
+    val preview=bitmap
+    DisposableEffect(preview){onDispose{preview?.recycle()}}
+    if(preview!=null)Image(preview.asImageBitmap(),contentDescription=style.name,contentScale=ContentScale.Crop,modifier=imageModifier)
+    else Box(imageModifier)
+   }
+   else if(res!=0)Image(painterResource(res),contentDescription=style.name,contentScale=ContentScale.Crop,modifier=imageModifier)
+   else Box(imageModifier,contentAlignment=Alignment.Center){Text("美甲图",color=Muted,fontSize=13.sp)}
+   Text(style.name,color=Ink,fontSize=14.sp,modifier=Modifier.padding(top=8.dp,start=4.dp))
+   Text(style.category,color=Muted,fontSize=11.sp,modifier=Modifier.padding(start=4.dp,top=3.dp))
+   Button(onClick={onStyle(style)},enabled=enabled,colors=ButtonDefaults.buttonColors(Coral),shape=RoundedCornerShape(18.dp),modifier=Modifier.fillMaxWidth().padding(top=6.dp)){Text("试戴",fontSize=12.sp)}
+  }
+ }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable private fun UploadSheet(onDismiss:()->Unit,onAlbum:()->Unit,onCamera:()->Unit){ModalBottomSheet(onDismissRequest=onDismiss,containerColor=Color.White){Column(Modifier.padding(24.dp).fillMaxWidth()){Text("选择照片",fontSize=18.sp,color=Ink);ListItem(headlineContent={Text("拍照")},leadingContent={Text("◉",color=Coral)},modifier=Modifier.clickable{onCamera()});ListItem(headlineContent={Text("从相册选择")},leadingContent={Text("▧",color=Coral)},modifier=Modifier.clickable{onAlbum()});TextButton(onClick=onDismiss,modifier=Modifier.align(Alignment.CenterHorizontally)){Text("取消",color=Muted)}}}}
@@ -155,8 +232,6 @@ private fun ResultScreen(
     result: GeneratedTryOn?,
     error: String?,
     onRetry: () -> Unit,
-    onLocal: (() -> Unit)?,
-    onCloud: () -> Unit,
     saving: Boolean,
     onSave: (Bitmap) -> Unit,
     onBack: () -> Unit,
@@ -171,7 +246,6 @@ private fun ResultScreen(
             error != null -> {
                 Text(error, modifier = Modifier.testTag("generation-error"))
                 Button(onClick = onRetry, modifier = Modifier.testTag("retry-generation")) { Text("重新生成") }
-                if (onLocal != null) TextButton(onClick = onLocal) { Text("使用本机预览") }
             }
             result == null -> {
                 Box(Modifier.fillMaxWidth().aspectRatio(.75f).background(Soft, RoundedCornerShape(18.dp)),
@@ -179,18 +253,8 @@ private fun ResultScreen(
                     CircularProgressIndicator(color = Coral)
                     Text("正在生成试戴效果", color = Muted, modifier = Modifier.padding(top = 82.dp))
                 }
-                if (onLocal != null) {
-                    TextButton(onClick = onLocal, modifier = Modifier.align(Alignment.CenterHorizontally)) {
-                        Text("先看本机预览")
-                    }
-                }
             }
             else -> {
-                Text(if (result.onDevice) "本机试戴预览" else "云端 AI 生成",
-                    color = Muted, modifier = Modifier.padding(bottom = 8.dp))
-                if (result.onDevice) TextButton(onClick = onCloud, enabled = !saving) {
-                    Text("使用云端 AI 生成")
-                }
                 TryOnPreview(result.bitmap, "试戴结果", Modifier.testTag("result-image"))
             }
         }
